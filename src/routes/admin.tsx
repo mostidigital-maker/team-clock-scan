@@ -1,0 +1,208 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { LogOut } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmployeesTab } from "@/components/admin/EmployeesTab";
+import { AttendanceTab } from "@/components/admin/AttendanceTab";
+import { QrTab } from "@/components/admin/QrTab";
+import { PayrollTab } from "@/components/admin/PayrollTab";
+import { SettingsTab } from "@/components/admin/SettingsTab";
+import { adminLogin, adminOverview } from "@/lib/admin.functions";
+import { getCompany } from "@/lib/employee.functions";
+import { currentMonth, hoursOf, money, type AttendanceRow, type Employee } from "@/lib/shared";
+
+export const Route = createFileRoute("/admin")({
+  head: () => ({
+    meta: [
+      { title: "ניהול נוכחות ושכר — מנהל" },
+      { name: "description", content: "לוח ניהול לאישור שעות עבודה, ניהול עובדים, ברקוד נוכחות ודוח שכר חודשי." },
+      { property: "og:title", content: "ניהול נוכחות ושכר — מנהל" },
+      { property: "og:description", content: "אישור שעות, ניהול עובדים, ברקוד נוכחות ודוח שכר." },
+    ],
+  }),
+  component: AdminPage,
+});
+
+const KEY = "attendance_admin_token";
+
+function AdminPage() {
+  const [token, setToken] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [month, setMonth] = useState(currentMonth());
+  const company = useQuery({ queryKey: ["company"], queryFn: () => getCompany() });
+
+  useEffect(() => {
+    setToken(localStorage.getItem(KEY));
+    setReady(true);
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem(KEY);
+    setToken(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+          <div className="flex items-center gap-3">
+            {company.data?.logo_url ? (
+              <img src={company.data.logo_url} alt="לוגו החברה" className="h-9 w-9 rounded-md object-contain" />
+            ) : null}
+            <div>
+              <h1 className="text-base font-bold">{company.data?.company_name ?? "מכללת המשווקים"}</h1>
+              <p className="text-xs text-muted-foreground">ממשק ניהול</p>
+            </div>
+          </div>
+          {token ? (
+            <Button variant="ghost" size="sm" onClick={logout}>
+              <LogOut className="ms-1 size-4" /> התנתקות
+            </Button>
+          ) : (
+            <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+              מסך עובד
+            </Link>
+          )}
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-6">
+        {!ready ? null : token ? (
+          <AdminDashboard token={token} month={month} setMonth={setMonth} onInvalid={logout} />
+        ) : (
+          <AdminLogin
+            onLogin={(t) => {
+              localStorage.setItem(KEY, t);
+              setToken(t);
+            }}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+
+function AdminLogin({ onLogin }: { onLogin: (t: string) => void }) {
+  const login = useServerFn(adminLogin);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const mutation = useMutation({
+    mutationFn: () => login({ data: { username, password } }),
+    onSuccess: (r) => onLogin(r.token),
+    onError: (e: Error) => toast.error(e.message || "התחברות נכשלה"),
+  });
+
+  return (
+    <div className="card-soft mx-auto max-w-md p-6">
+      <h2 className="text-xl font-bold">כניסת מנהל</h2>
+      <form
+        className="mt-5 space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          mutation.mutate();
+        }}
+      >
+        <div className="space-y-2">
+          <Label>שם משתמש</Label>
+          <Input value={username} onChange={(e) => setUsername(e.target.value)} required />
+        </div>
+        <div className="space-y-2">
+          <Label>סיסמה</Label>
+          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        <Button type="submit" className="h-12 w-full text-base" disabled={mutation.isPending}>
+          כניסה
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+function AdminDashboard({
+  token,
+  month,
+  setMonth,
+  onInvalid,
+}: {
+  token: string;
+  month: string;
+  setMonth: (m: string) => void;
+  onInvalid: () => void;
+}) {
+  const overview = useServerFn(adminOverview);
+  const query = useQuery({
+    queryKey: ["admin-overview", token, month],
+    queryFn: () => overview({ data: { token, month } }),
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (query.error) {
+      toast.error("החיבור פג תוקף, יש להתחבר מחדש");
+      onInvalid();
+    }
+  }, [query.error, onInvalid]);
+
+  const employees = (query.data?.employees ?? []) as Employee[];
+  const records = (query.data?.records ?? []) as AttendanceRow[];
+  const approved = records.filter((r) => r.status === "approved");
+  const approvedHours = approved.reduce((s, r) => s + hoursOf(r), 0);
+  const payroll = employees.reduce((sum, e) => {
+    const h = approved.filter((r) => r.employee_id === e.id).reduce((s, r) => s + hoursOf(r), 0);
+    return sum + h * Number(e.hourly_wage) + Number(e.bonus) + Number(e.travel);
+  }, 0);
+
+  return (
+    <Tabs defaultValue="dashboard" className="space-y-5">
+      <TabsList className="flex w-full flex-wrap">
+        <TabsTrigger value="dashboard">סקירה</TabsTrigger>
+        <TabsTrigger value="employees">עובדים</TabsTrigger>
+        <TabsTrigger value="attendance">נוכחות</TabsTrigger>
+        <TabsTrigger value="qr">ברקוד</TabsTrigger>
+        <TabsTrigger value="payroll">שכר</TabsTrigger>
+        <TabsTrigger value="settings">הגדרות</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="dashboard">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat label="סה״כ עובדים" value={String(employees.filter((e) => e.active).length)} />
+          <Stat label="עובדים בעבודה כעת" value={String(query.data?.working ?? 0)} />
+          <Stat label="שעות מאושרות החודש" value={approvedHours.toFixed(2)} />
+          <Stat label="שכר מאושר החודש" value={money(Math.round(payroll * 100) / 100)} />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="employees">
+        <EmployeesTab token={token} />
+      </TabsContent>
+      <TabsContent value="attendance">
+        <AttendanceTab token={token} month={month} setMonth={setMonth} />
+      </TabsContent>
+      <TabsContent value="qr">
+        <QrTab token={token} />
+      </TabsContent>
+      <TabsContent value="payroll">
+        <PayrollTab token={token} month={month} setMonth={setMonth} />
+      </TabsContent>
+      <TabsContent value="settings">
+        <SettingsTab token={token} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="card-soft p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-extrabold">{value}</p>
+    </div>
+  );
+}
