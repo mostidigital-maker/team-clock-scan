@@ -44,8 +44,10 @@ export function QrScanDialog({
       setError(null);
       setStarting(true);
 
-      // Wait until the Dialog/video element is actually mounted.
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      // Wait until the Dialog/video element is actually mounted and visible.
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => setTimeout(resolve, 250))
+      );
 
       const video = videoRef.current;
 
@@ -55,7 +57,6 @@ export function QrScanDialog({
       }
 
       try {
-        // Make sure camera access is available.
         if (!window.isSecureContext) {
           throw new Error(
             "האתר חייב לפעול באמצעות HTTPS כדי להשתמש במצלמה."
@@ -67,20 +68,6 @@ export function QrScanDialog({
             "הדפדפן אינו תומך בגישה למצלמה."
           );
         }
-
-        // Explicitly request camera permission.
-        // This should trigger the browser's camera permission dialog.
-        const testStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-          },
-          audio: false,
-        });
-
-        // Stop the temporary permission stream.
-        testStream.getTracks().forEach((track) => track.stop());
-
-        if (cancelled) return;
 
         const scanner = new QrScannerLib(
           video,
@@ -100,17 +87,31 @@ export function QrScanDialog({
             preferredCamera: "environment",
             highlightScanRegion: true,
             highlightCodeOutline: true,
-            maxScansPerSecond: 10,
+            maxScansPerSecond: 5,
+            returnDetailedScanResult: true,
           }
         );
 
         scannerRef.current = scanner;
 
+        // qr-scanner requests the camera and wires up the stream itself.
         await scanner.start();
 
-        if (!cancelled) {
-          setStarting(false);
+        if (cancelled) {
+          scanner.stop();
+          return;
         }
+
+        // Some mobile browsers do not autoplay the stream: force it.
+        try {
+          video.muted = true;
+          video.setAttribute("playsinline", "true");
+          await video.play();
+        } catch {
+          /* play() rejection is not fatal for scanning */
+        }
+
+        setStarting(false);
       } catch (err) {
         console.error("QR scanner error:", err);
 

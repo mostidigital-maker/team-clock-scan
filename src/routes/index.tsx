@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QrScanDialog } from "@/components/QrScanDialog";
+import { InstallAppButton } from "@/components/InstallAppButton";
 import { getPosition } from "@/lib/geo";
 import { employeeLogin, employeePunch, employeeState, getCompany } from "@/lib/employee.functions";
 import { currentMonth, fmtDate, fmtTime, hoursOf, statusLabel } from "@/lib/shared";
@@ -53,17 +54,20 @@ function EmployeeApp() {
             ) : null}
             <h1 className="text-base font-bold">{company.data?.company_name ?? "מכללת המשווקים"}</h1>
           </div>
-          {token ? (
-            <Button variant="ghost" size="sm" onClick={logout}>
-              <LogOut className="ms-1 size-4" /> יציאה
-            </Button>
-          ) : (
-            <Link to="/admin" className="text-sm text-muted-foreground hover:text-foreground">
-              <span className="inline-flex items-center gap-1">
-                <ShieldCheck className="size-4" /> מנהל
-              </span>
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            <InstallAppButton />
+            {token ? (
+              <Button variant="ghost" size="sm" onClick={logout}>
+                <LogOut className="ms-1 size-4" /> יציאה
+              </Button>
+            ) : (
+              <Link to="/admin" className="text-sm text-muted-foreground hover:text-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <ShieldCheck className="size-4" /> מנהל
+                </span>
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
