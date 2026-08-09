@@ -17,6 +17,7 @@ export function SettingsTab({ token }: { token: string }) {
 
   const [name, setName] = useState("");
   const [logo, setLogo] = useState<string | null>(null);
+  const [deductBreaks, setDeductBreaks] = useState(true);
   const [currentPassword, setCurrent] = useState("");
   const [newPassword, setNew] = useState("");
 
@@ -24,11 +25,12 @@ export function SettingsTab({ token }: { token: string }) {
     if (company.data) {
       setName(company.data.company_name);
       setLogo(company.data.logo_url);
+      setDeductBreaks(company.data.deduct_breaks ?? true);
     }
   }, [company.data]);
 
   const saveMutation = useMutation({
-    mutationFn: () => save({ data: { token, company_name: name, logo_url: logo } }),
+    mutationFn: () => save({ data: { token, company_name: name, logo_url: logo, deduct_breaks: deductBreaks } }),
     onSuccess: async () => {
       toast.success("ההגדרות נשמרו");
       await qc.invalidateQueries({ queryKey: ["company"] });
@@ -75,6 +77,21 @@ export function SettingsTab({ token }: { token: string }) {
                 הסרה
               </Button>
             ) : null}
+          </div>
+        </div>
+        <div className="flex items-start gap-3 rounded-md border p-3">
+          <input
+            id="deduct-breaks"
+            type="checkbox"
+            className="mt-1 size-4 accent-primary"
+            checked={deductBreaks}
+            onChange={(e) => setDeductBreaks(e.target.checked)}
+          />
+          <div>
+            <Label htmlFor="deduct-breaks">ניכוי זמן הפסקות מסך השעות</Label>
+            <p className="text-xs text-muted-foreground">
+              כשמסומן — זמן ההפסקות יורד מסך שעות העבודה והשכר. כשלא מסומן — ההפסקות מתועדות בלבד.
+            </p>
           </div>
         </div>
         <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>

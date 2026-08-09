@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminOverview } from "@/lib/admin.functions";
+import { getCompany } from "@/lib/employee.functions";
 import { downloadCsv } from "@/lib/csv";
 import { hoursOf, money, type AttendanceRow, type Employee } from "@/lib/shared";
 
@@ -14,13 +15,15 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     queryKey: ["admin-overview", token, month],
     queryFn: () => overview({ data: { token, month } }),
   });
+  const company = useQuery({ queryKey: ["company"], queryFn: () => getCompany() });
+  const deductBreaks = company.data?.deduct_breaks ?? true;
 
   const employees = (query.data?.employees ?? []) as Employee[];
   const records = (query.data?.records ?? []) as AttendanceRow[];
 
   const rows = employees.map((e) => {
     const approved = records.filter((r) => r.employee_id === e.id && r.status === "approved");
-    const hours = approved.reduce((s, r) => s + hoursOf(r), 0);
+    const hours = approved.reduce((s, r) => s + hoursOf(r, deductBreaks), 0);
     const base = hours * Number(e.hourly_wage);
     return {
       name: e.full_name,
@@ -93,7 +96,9 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
           </tfoot>
         </table>
       </div>
-      <p className="text-xs text-muted-foreground">* רק שעות שאושרו נכללות בחישוב.</p>
+      <p className="text-xs text-muted-foreground">
+        * רק שעות שאושרו נכללות בחישוב. {deductBreaks ? "זמן ההפסקות מנוכה מסך השעות." : "זמן ההפסקות אינו מנוכה מסך השעות."}
+      </p>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { adminAttendance, adminOverview, deleteAttendance, saveAttendance, setAttendanceStatus } from "@/lib/admin.functions";
+import { getCompany } from "@/lib/employee.functions";
 import {
   breakMinutes,
   currentMonth,
@@ -52,6 +53,8 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
     queryKey: ["admin-overview", token, currentMonth()],
     queryFn: () => overviewFn({ data: { token, month: currentMonth() } }),
   });
+  const company = useQuery({ queryKey: ["company"], queryFn: () => getCompany() });
+  const deductBreaks = company.data?.deduct_breaks ?? true;
 
   const rows = (records.data ?? []) as AttendanceRow[];
   const employeeList = (employees.data?.employees ?? []) as Employee[];
@@ -119,7 +122,7 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
               <th className="p-3">כניסה</th>
               <th className="p-3">יציאה</th>
               <th className="p-3">הפסקות</th>
-              <th className="p-3">שעות</th>
+              <th className="p-3">{deductBreaks ? "שעות (נטו)" : "שעות (ברוטו)"}</th>
               <th className="p-3">מיקום</th>
               <th className="p-3">סטטוס</th>
               <th className="p-3">פעולות</th>
@@ -141,7 +144,7 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
                     "—"
                   )}
                 </td>
-                <td className="p-3 font-bold">{hoursOf(r).toFixed(2)}</td>
+                <td className="p-3 font-bold">{hoursOf(r, deductBreaks).toFixed(2)}</td>
                 <td className="p-3">
                   {r.entry_latitude ? (
                     <a
