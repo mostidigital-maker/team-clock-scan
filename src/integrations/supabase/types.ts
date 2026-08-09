@@ -181,18 +181,21 @@ export type Database = {
       company_settings: {
         Row: {
           company_name: string
+          deduct_breaks: boolean
           id: boolean
           logo_url: string | null
           updated_at: string
         }
         Insert: {
           company_name?: string
+          deduct_breaks?: boolean
           id?: boolean
           logo_url?: string | null
           updated_at?: string
         }
         Update: {
           company_name?: string
+          deduct_breaks?: boolean
           id?: boolean
           logo_url?: string | null
           updated_at?: string
