@@ -35,14 +35,14 @@ export const employeeState = createServerFn({ method: "POST" })
     const { from, to } = monthRange(data.month);
     const { data: records } = await db
       .from("attendance")
-      .select("*")
+      .select("*, attendance_breaks(*)")
       .eq("employee_id", emp.id)
       .gte("work_date", from)
       .lt("work_date", to)
       .order("work_date", { ascending: false });
     const { data: open } = await db
       .from("attendance")
-      .select("*")
+      .select("*, attendance_breaks(*)")
       .eq("employee_id", emp.id)
       .is("exit_time", null)
       .not("entry_time", "is", null)
@@ -60,7 +60,51 @@ export const employeeState = createServerFn({ method: "POST" })
       records: records ?? [],
       openRecord: open ?? null,
       finishedToday: (todayRows ?? []).some((r) => r.exit_time),
+      openBreak:
+        (open?.attendance_breaks ?? []).find((b: { end_time: string | null }) => !b.end_time) ?? null,
     };
+  });
+
+export const employeeBreak = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: z.string().min(10), action: z.enum(["start", "end"]) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { db, requireEmployee } = await import("./attendance.server");
+    const emp = await requireEmployee(data.token);
+    const { data: open } = await db
+      .from("attendance")
+      .select("id")
+      .eq("employee_id", emp.id)
+      .is("exit_time", null)
+      .not("entry_time", "is", null)
+      .order("entry_time", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!open) throw new Error("אין משמרת פתוחה");
+    const { data: openBreak } = await db
+      .from("attendance_breaks")
+      .select("*")
+      .eq("attendance_id", open.id)
+      .is("end_time", null)
+      .order("start_time", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data.action === "start") {
+      if (openBreak) throw new Error("כבר יצאת להפסקה");
+      const { error } = await db
+        .from("attendance_breaks")
+        .insert({ attendance_id: open.id, start_time: new Date().toISOString() });
+      if (error) throw new Error(error.message);
+    } else {
+      if (!openBreak) throw new Error("לא נמצאה הפסקה פתוחה");
+      const { error } = await db
+        .from("attendance_breaks")
+        .update({ end_time: new Date().toISOString() })
+        .eq("id", openBreak.id);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
   });
 
 export const employeePunch = createServerFn({ method: "POST" })

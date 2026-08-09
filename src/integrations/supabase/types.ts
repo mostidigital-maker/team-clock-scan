@@ -146,6 +146,38 @@ export type Database = {
           },
         ]
       }
+      attendance_breaks: {
+        Row: {
+          attendance_id: string
+          created_at: string
+          end_time: string | null
+          id: string
+          start_time: string
+        }
+        Insert: {
+          attendance_id: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          start_time?: string
+        }
+        Update: {
+          attendance_id?: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_breaks_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_settings: {
         Row: {
           company_name: string
