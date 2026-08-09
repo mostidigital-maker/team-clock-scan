@@ -1,3 +1,10 @@
+export type BreakRow = {
+  id: string;
+  attendance_id: string;
+  start_time: string;
+  end_time: string | null;
+};
+
 export type AttendanceRow = {
   id: string;
   employee_id: string;
@@ -11,6 +18,7 @@ export type AttendanceRow = {
   exit_longitude: number | null;
   status: string;
   approved_by: string | null;
+  attendance_breaks?: BreakRow[];
 };
 
 export type Employee = {
@@ -32,9 +40,30 @@ export type QrCode = {
   active: boolean;
 };
 
-export function hoursOf(row: { entry_time: string | null; exit_time: string | null }): number {
+export function breakMinutes(row: { attendance_breaks?: BreakRow[] | null }): number {
+  const list = row.attendance_breaks ?? [];
+  const ms = list.reduce((s, b) => {
+    if (!b.end_time) return s;
+    const d = new Date(b.end_time).getTime() - new Date(b.start_time).getTime();
+    return s + (d > 0 ? d : 0);
+  }, 0);
+  return Math.round(ms / 60000);
+}
+
+export function fmtDuration(minutes: number) {
+  if (!minutes) return "—";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")} ש׳` : `${m} דק׳`;
+}
+
+export function hoursOf(row: {
+  entry_time: string | null;
+  exit_time: string | null;
+  attendance_breaks?: BreakRow[] | null;
+}): number {
   if (!row.entry_time || !row.exit_time) return 0;
-  const ms = new Date(row.exit_time).getTime() - new Date(row.entry_time).getTime();
+  const ms = new Date(row.exit_time).getTime() - new Date(row.entry_time).getTime() - breakMinutes(row) * 60000;
   return ms > 0 ? Math.round((ms / 36e5) * 100) / 100 : 0;
 }
 
