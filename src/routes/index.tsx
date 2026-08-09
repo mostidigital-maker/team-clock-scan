@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, LogIn, LogOut, MapPin, ShieldCheck } from "lucide-react";
+import { ChevronDown, Coffee, LogIn, LogOut, MapPin, Play, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label";
 import { QrScanDialog } from "@/components/QrScanDialog";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { getPosition } from "@/lib/geo";
-import { employeeLogin, employeePunch, employeeState, getCompany } from "@/lib/employee.functions";
-import { currentMonth, fmtDate, fmtTime, hoursOf, statusLabel } from "@/lib/shared";
+import { employeeBreak, employeeLogin, employeePunch, employeeState, getCompany } from "@/lib/employee.functions";
+import { breakMinutes, currentMonth, fmtDate, fmtDuration, fmtTime, hoursOf, statusLabel } from "@/lib/shared";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -127,6 +127,7 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
   const month = currentMonth();
   const state = useServerFn(employeeState);
   const punch = useServerFn(employeePunch);
+  const breakFn = useServerFn(employeeBreak);
   const qc = useQueryClient();
   const [scan, setScan] = useState<null | "in" | "out">(null);
   const [busy, setBusy] = useState(false);
@@ -147,7 +148,7 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
 
   if (!query.data) return <p className="text-center text-muted-foreground">טוען…</p>;
 
-  const { employee, records, openRecord, finishedToday } = query.data;
+  const { employee, records, openRecord, finishedToday, openBreak } = query.data;
   const status = openRecord ? "בעבודה" : finishedToday ? "סיימת עבודה" : "לא התחלת עבודה";
 
   const approved = records.filter((r) => r.status === "approved");
@@ -177,6 +178,19 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
     }
   };
 
+  const handleBreak = async (action: "start" | "end") => {
+    setBusy(true);
+    try {
+      await breakFn({ data: { token, action } });
+      toast.success(action === "start" ? "יצאת להפסקה" : "חזרת מהפסקה");
+      await qc.invalidateQueries({ queryKey: ["employee-state"] });
+    } catch (e) {
+      toast.error((e as Error).message || "הפעולה נכשלה");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="card-soft p-5">
@@ -191,7 +205,22 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
           {status}
         </div>
         {openRecord ? (
-          <p className="mt-3 text-sm text-muted-foreground">שעת כניסה: {fmtTime(openRecord.entry_time)}</p>
+          <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+            <p>שעת כניסה: {fmtTime(openRecord.entry_time)}</p>
+            <p>
+              סה״כ הפסקות היום: {fmtDuration(breakMinutes(openRecord))}
+              {openBreak ? ` · בהפסקה מאז ${fmtTime(openBreak.start_time)}` : ""}
+            </p>
+            {(openRecord.attendance_breaks ?? []).length ? (
+              <ul className="text-xs">
+                {(openRecord.attendance_breaks ?? []).map((b) => (
+                  <li key={b.id}>
+                    הפסקה: {fmtTime(b.start_time)} – {b.end_time ? fmtTime(b.end_time) : "פעילה"}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -203,9 +232,20 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
         >
           <LogIn className="ms-2 size-6" /> כניסה
         </Button>
+        {openRecord ? (
+          <Button
+            variant="outline"
+            className="h-16 w-full text-base font-bold"
+            disabled={busy}
+            onClick={() => handleBreak(openBreak ? "end" : "start")}
+          >
+            {openBreak ? <Play className="ms-2 size-5" /> : <Coffee className="ms-2 size-5" />}
+            {openBreak ? "חזרה מהפסקה" : "יציאה להפסקה"}
+          </Button>
+        ) : null}
         <Button
           className="h-20 w-full bg-destructive text-lg font-bold text-destructive-foreground hover:bg-destructive/90"
-          disabled={!openRecord || busy}
+          disabled={!openRecord || busy || !!openBreak}
           onClick={() => setScan("out")}
         >
           <LogOut className="ms-2 size-6" /> יציאה
@@ -248,6 +288,9 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
                       <p className="text-xs text-muted-foreground">
                         {fmtTime(r.entry_time)} – {fmtTime(r.exit_time)}
                       </p>
+                      {breakMinutes(r) ? (
+                        <p className="text-xs text-muted-foreground">הפסקות: {fmtDuration(breakMinutes(r))}</p>
+                      ) : null}
                     </div>
                     <div className="text-left">
                       <p className="font-bold">{hoursOf(r).toFixed(2)} ש׳</p>
