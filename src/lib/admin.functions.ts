@@ -193,6 +193,7 @@ export const saveCompany = createServerFn({ method: "POST" })
       .extend({
         company_name: z.string().trim().min(2).max(80),
         logo_url: z.string().max(600000).nullable(),
+        deduct_breaks: z.boolean().optional(),
       })
       .parse(d),
   )
@@ -201,7 +202,12 @@ export const saveCompany = createServerFn({ method: "POST" })
     await requireAdmin(data.token);
     const { error } = await db
       .from("company_settings")
-      .update({ company_name: data.company_name, logo_url: data.logo_url, updated_at: new Date().toISOString() })
+      .update({
+        company_name: data.company_name,
+        logo_url: data.logo_url,
+        ...(data.deduct_breaks === undefined ? {} : { deduct_breaks: data.deduct_breaks }),
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", true);
     if (error) throw new Error(error.message);
     return { ok: true };
