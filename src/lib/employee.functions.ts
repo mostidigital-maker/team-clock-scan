@@ -3,10 +3,15 @@ import { z } from "zod";
 
 export const getCompany = createServerFn({ method: "GET" }).handler(async () => {
   const { db } = await import("./attendance.server");
-  const { data } = await db.from("company_settings").select("company_name, logo_url").eq("id", true).maybeSingle();
+  const { data } = await db
+    .from("company_settings")
+    .select("company_name, logo_url, deduct_breaks")
+    .eq("id", true)
+    .maybeSingle();
   return {
     company_name: data?.company_name ?? "מכללת המשווקים",
     logo_url: data?.logo_url ?? null,
+    deduct_breaks: data?.deduct_breaks ?? true,
   };
 });
 
