@@ -133,6 +133,7 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
   const [busy, setBusy] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
 
+  const companySettings = useQuery({ queryKey: ["company"], queryFn: () => getCompany() });
   const query = useQuery({
     queryKey: ["employee-state", token, month],
     queryFn: () => state({ data: { token, month } }),
@@ -152,7 +153,7 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
   const status = openRecord ? "בעבודה" : finishedToday ? "סיימת עבודה" : "לא התחלת עבודה";
 
   const approved = records.filter((r) => r.status === "approved");
-  const deductBreaks = company.data?.deduct_breaks ?? true;
+  const deductBreaks = companySettings.data?.deduct_breaks ?? true;
   const approvedHours = approved.reduce((s, r) => s + hoursOf(r, deductBreaks), 0);
 
   const handleScan = async (value: string) => {
