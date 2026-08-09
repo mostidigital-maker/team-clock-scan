@@ -152,7 +152,8 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
   const status = openRecord ? "בעבודה" : finishedToday ? "סיימת עבודה" : "לא התחלת עבודה";
 
   const approved = records.filter((r) => r.status === "approved");
-  const approvedHours = approved.reduce((s, r) => s + hoursOf(r), 0);
+  const deductBreaks = company.data?.deduct_breaks ?? true;
+  const approvedHours = approved.reduce((s, r) => s + hoursOf(r, deductBreaks), 0);
 
   const handleScan = async (value: string) => {
     const type = scan;
@@ -293,7 +294,7 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
                       ) : null}
                     </div>
                     <div className="text-left">
-                      <p className="font-bold">{hoursOf(r).toFixed(2)} ש׳</p>
+                      <p className="font-bold">{hoursOf(r, deductBreaks).toFixed(2)} ש׳</p>
                       <p
                         className={`text-xs ${r.status === "approved" ? "text-success" : r.status === "rejected" ? "text-destructive" : "text-muted-foreground"}`}
                       >
