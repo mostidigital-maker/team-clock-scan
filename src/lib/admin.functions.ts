@@ -30,7 +30,7 @@ export const adminOverview = createServerFn({ method: "POST" })
     const { data: employees } = await db.from("employees").select("*").order("full_name");
     const { data: records } = await db
       .from("attendance")
-      .select("*")
+      .select("*, attendance_breaks(*)")
       .gte("work_date", from)
       .lt("work_date", to);
     const { count: working } = await db
@@ -49,7 +49,7 @@ export const adminAttendance = createServerFn({ method: "POST" })
     const { from, to } = monthRange(data.month);
     const { data: records } = await db
       .from("attendance")
-      .select("*, employees(full_name)")
+      .select("*, employees(full_name), attendance_breaks(*)")
       .gte("work_date", from)
       .lt("work_date", to)
       .order("work_date", { ascending: false });

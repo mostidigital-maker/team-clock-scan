@@ -9,7 +9,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { adminAttendance, adminOverview, deleteAttendance, saveAttendance, setAttendanceStatus } from "@/lib/admin.functions";
-import { currentMonth, fmtDate, fmtTime, hoursOf, statusLabel, type AttendanceRow, type Employee } from "@/lib/shared";
+import {
+  breakMinutes,
+  currentMonth,
+  fmtDate,
+  fmtDuration,
+  fmtTime,
+  hoursOf,
+  statusLabel,
+  type AttendanceRow,
+  type Employee,
+} from "@/lib/shared";
 
 function toLocalInput(v: string | null) {
   if (!v) return "";
@@ -108,6 +118,7 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
               <th className="p-3">תאריך</th>
               <th className="p-3">כניסה</th>
               <th className="p-3">יציאה</th>
+              <th className="p-3">הפסקות</th>
               <th className="p-3">שעות</th>
               <th className="p-3">מיקום</th>
               <th className="p-3">סטטוס</th>
@@ -121,6 +132,15 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
                 <td className="p-3">{fmtDate(r.work_date)}</td>
                 <td className="p-3">{fmtTime(r.entry_time)}</td>
                 <td className="p-3">{fmtTime(r.exit_time)}</td>
+                <td className="p-3">
+                  {(r.attendance_breaks ?? []).length ? (
+                    <span title={(r.attendance_breaks ?? []).map((b) => `${fmtTime(b.start_time)}–${fmtTime(b.end_time)}`).join(", ")}>
+                      {fmtDuration(breakMinutes(r))} ({(r.attendance_breaks ?? []).length})
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td className="p-3 font-bold">{hoursOf(r).toFixed(2)}</td>
                 <td className="p-3">
                   {r.entry_latitude ? (
@@ -188,7 +208,7 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="p-6 text-center text-muted-foreground">
+                <td colSpan={9} className="p-6 text-center text-muted-foreground">
                   אין רישומים בחודש זה
                 </td>
               </tr>
