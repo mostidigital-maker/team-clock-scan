@@ -61,9 +61,12 @@ export function hoursOf(row: {
   entry_time: string | null;
   exit_time: string | null;
   attendance_breaks?: BreakRow[] | null;
-}): number {
+}, deductBreaks = true): number {
   if (!row.entry_time || !row.exit_time) return 0;
-  const ms = new Date(row.exit_time).getTime() - new Date(row.entry_time).getTime() - breakMinutes(row) * 60000;
+  const ms =
+    new Date(row.exit_time).getTime() -
+    new Date(row.entry_time).getTime() -
+    (deductBreaks ? breakMinutes(row) * 60000 : 0);
   return ms > 0 ? Math.round((ms / 36e5) * 100) / 100 : 0;
 }
 
