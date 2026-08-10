@@ -17,6 +17,7 @@ export type AttendanceRow = {
   exit_latitude: number | null;
   exit_longitude: number | null;
   status: string;
+  work_mode?: string;
   approved_by: string | null;
   attendance_breaks?: BreakRow[];
 };
@@ -35,6 +36,7 @@ export type QrCode = {
   id: string;
   token: string;
   label: string;
+  kind?: string;
   valid_from: string;
   valid_until: string;
   active: boolean;

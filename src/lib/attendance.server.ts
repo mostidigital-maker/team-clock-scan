@@ -59,11 +59,12 @@ export function monthRange(month: string) {
   return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 }
 
-export async function validateQr(qrToken: string) {
+export async function validateQr(qrToken: string, kind: "qr" | "home" = "qr") {
   const { data } = await db
     .from("qr_codes")
     .select("*")
     .eq("token", qrToken.trim())
+    .eq("kind", kind)
     .maybeSingle();
   if (!data) throw new Error("QR_INVALID");
   const now = new Date();
