@@ -87,6 +87,7 @@ export type Database = {
           qr_code_id: string | null
           status: string
           work_date: string
+          work_mode: string
         }
         Insert: {
           approved_at?: string | null
@@ -104,6 +105,7 @@ export type Database = {
           qr_code_id?: string | null
           status?: string
           work_date: string
+          work_mode?: string
         }
         Update: {
           approved_at?: string | null
@@ -121,6 +123,7 @@ export type Database = {
           qr_code_id?: string | null
           status?: string
           work_date?: string
+          work_mode?: string
         }
         Relationships: [
           {
@@ -240,6 +243,7 @@ export type Database = {
           active: boolean
           created_at: string
           id: string
+          kind: string
           label: string
           token: string
           valid_from: string
@@ -249,6 +253,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          kind?: string
           label?: string
           token: string
           valid_from?: string
@@ -258,6 +263,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          kind?: string
           label?: string
           token?: string
           valid_from?: string
