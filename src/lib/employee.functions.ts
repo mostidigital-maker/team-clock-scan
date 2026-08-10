@@ -119,15 +119,16 @@ export const employeePunch = createServerFn({ method: "POST" })
         token: z.string().min(10),
         qrToken: z.string().min(4),
         type: z.enum(["in", "out"]),
-        latitude: z.number(),
-        longitude: z.number(),
+        mode: z.enum(["site", "home"]).default("site"),
+        latitude: z.number().nullable().optional(),
+        longitude: z.number().nullable().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const { db, requireEmployee, validateQr } = await import("./attendance.server");
     const emp = await requireEmployee(data.token);
-    const qr = await validateQr(data.qrToken);
+    const qr = await validateQr(data.qrToken, data.mode === "home" ? "home" : "qr");
     const now = new Date().toISOString();
 
     const { data: open } = await db
@@ -146,9 +147,10 @@ export const employeePunch = createServerFn({ method: "POST" })
         employee_id: emp.id,
         work_date: now.slice(0, 10),
         entry_time: now,
-        entry_latitude: data.latitude,
-        entry_longitude: data.longitude,
+        entry_latitude: data.latitude ?? null,
+        entry_longitude: data.longitude ?? null,
         qr_code_id: qr.id,
+        work_mode: data.mode,
         status: "pending",
       });
       if (error) throw new Error(error.message);
@@ -160,8 +162,8 @@ export const employeePunch = createServerFn({ method: "POST" })
       .from("attendance")
       .update({
         exit_time: now,
-        exit_latitude: data.latitude,
-        exit_longitude: data.longitude,
+        exit_latitude: data.latitude ?? null,
+        exit_longitude: data.longitude ?? null,
         exit_qr_code_id: qr.id,
       })
       .eq("id", open.id);
