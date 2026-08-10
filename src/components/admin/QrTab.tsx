@@ -24,16 +24,31 @@ export function QrTab({ token }: { token: string }) {
   const qc = useQueryClient();
   const [label, setLabel] = useState("");
   const [validUntil, setValidUntil] = useState(defaultUntil());
+  const [homeLabel, setHomeLabel] = useState("");
+  const [homeUntil, setHomeUntil] = useState(defaultUntil());
 
   const query = useQuery({ queryKey: ["qr-codes", token], queryFn: () => list({ data: { token } }) });
-  const codes = (query.data ?? []) as QrCode[];
+  const all = (query.data ?? []) as QrCode[];
+  const codes = all.filter((c) => (c.kind ?? "qr") === "qr");
+  const homeCodes = all.filter((c) => c.kind === "home");
   const active = codes.find((c) => c.active && new Date(c.valid_until) > new Date());
+  const activeHome = homeCodes.find((c) => c.active && new Date(c.valid_until) > new Date());
 
   const createMutation = useMutation({
-    mutationFn: () => create({ data: { token, label, valid_until: validUntil } }),
+    mutationFn: () => create({ data: { token, label, valid_until: validUntil, kind: "qr" } }),
     onSuccess: async () => {
       toast.success("נוצר ברקוד חדש");
       setLabel("");
+      await qc.invalidateQueries({ queryKey: ["qr-codes"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createHomeMutation = useMutation({
+    mutationFn: () => create({ data: { token, label: homeLabel, valid_until: homeUntil, kind: "home" } }),
+    onSuccess: async () => {
+      toast.success("נוצר קוד עבודה מהבית");
+      setHomeLabel("");
       await qc.invalidateQueries({ queryKey: ["qr-codes"] });
     },
     onError: (e: Error) => toast.error(e.message),
