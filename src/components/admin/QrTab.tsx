@@ -97,6 +97,71 @@ export function QrTab({ token }: { token: string }) {
         </Button>
       </div>
 
+      <div className="card-soft space-y-3 p-5">
+        <h2 className="text-lg font-bold">קוד עבודה מהבית</h2>
+        {activeHome ? (
+          <div className="flex flex-col items-center gap-2 text-center">
+            <p className="rounded-lg bg-secondary px-6 py-4 text-4xl font-extrabold tracking-widest">
+              {activeHome.token}
+            </p>
+            <p className="text-sm font-medium">{activeHome.label || "ללא תיאור"}</p>
+            <p className="text-xs text-muted-foreground">
+              בתוקף עד: {new Date(activeHome.valid_until).toLocaleString("he-IL")}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">אין קוד פעיל לעבודה מהבית. צרו קוד חדש למטה.</p>
+        )}
+        <p className="text-xs text-muted-foreground">יצירת קוד חדש מבטלת אוטומטית את הקוד הקודם.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>תיאור</Label>
+            <Input value={homeLabel} onChange={(e) => setHomeLabel(e.target.value)} placeholder="למשל: קוד יומי" />
+          </div>
+          <div className="space-y-1">
+            <Label>בתוקף עד</Label>
+            <Input type="datetime-local" value={homeUntil} onChange={(e) => setHomeUntil(e.target.value)} />
+          </div>
+        </div>
+        <Button onClick={() => createHomeMutation.mutate()} disabled={createHomeMutation.isPending}>
+          יצירת קוד
+        </Button>
+        {homeCodes.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-right text-sm">
+              <thead className="bg-secondary text-xs">
+                <tr>
+                  <th className="p-3">קוד</th>
+                  <th className="p-3">תיאור</th>
+                  <th className="p-3">בתוקף עד</th>
+                  <th className="p-3">סטטוס</th>
+                  <th className="p-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {homeCodes.map((c) => (
+                  <tr key={c.id} className="border-t">
+                    <td className="p-3 font-bold tracking-widest">{c.token}</td>
+                    <td className="p-3">{c.label || "—"}</td>
+                    <td className="p-3">{new Date(c.valid_until).toLocaleString("he-IL")}</td>
+                    <td className="p-3">{c.active ? "פעיל" : "מבוטל"}</td>
+                    <td className="p-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleMutation.mutate({ id: c.id, active: !c.active })}
+                      >
+                        {c.active ? "ביטול" : "הפעלה"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+
       <div className="card-soft overflow-x-auto">
         <table className="w-full text-right text-sm">
           <thead className="bg-secondary text-xs">
