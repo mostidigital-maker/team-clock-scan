@@ -173,7 +173,7 @@ export const listQrCodes = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
-    const { data: rows } = await db.from("qr_codes").select("*").order("created_at", { ascending: false }).limit(30);
+    const { data: rows } = await db.from("qr_codes").select("*").order("created_at", { ascending: false }).limit(60);
     return rows ?? [];
   });
 
