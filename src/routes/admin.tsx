@@ -16,7 +16,7 @@ import { PayrollTab } from "@/components/admin/PayrollTab";
 import { SettingsTab } from "@/components/admin/SettingsTab";
 import { adminLogin, adminOverview } from "@/lib/admin.functions";
 import { getCompany } from "@/lib/employee.functions";
-import { currentMonth, hoursOf, money, type AttendanceRow, type Employee } from "@/lib/shared";
+import { currentMonth, fmtTime, hoursOf, money, type AttendanceRow, type Employee } from "@/lib/shared";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -141,7 +141,9 @@ function AdminDashboard({
     queryKey: ["admin-overview", token, month],
     queryFn: () => overview({ data: { token, month } }),
     retry: false,
+    refetchInterval: 60000,
   });
+  const [liveFilter, setLiveFilter] = useState<null | "all" | "site" | "home" | "break">(null);
 
   useEffect(() => {
     if (query.error) {
@@ -159,6 +161,21 @@ function AdminDashboard({
     return sum + h * Number(e.hourly_wage) + Number(e.bonus) + Number(e.travel);
   }, 0);
 
+  type LiveRow = {
+    id: string;
+    employee_name: string;
+    work_mode: string;
+    entry_time: string | null;
+    on_break: boolean;
+    break_start: string | null;
+  };
+  const live = (query.data?.live ?? []) as LiveRow[];
+  const fromHome = live.filter((r) => r.work_mode === "home");
+  const fromSite = live.filter((r) => r.work_mode !== "home");
+  const onBreak = live.filter((r) => r.on_break);
+  const filtered =
+    liveFilter === "home" ? fromHome : liveFilter === "site" ? fromSite : liveFilter === "break" ? onBreak : live;
+
   return (
     <Tabs defaultValue="dashboard" className="space-y-5">
       <TabsList className="flex w-full flex-wrap">
@@ -171,11 +188,76 @@ function AdminDashboard({
       </TabsList>
 
       <TabsContent value="dashboard">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat label="סה״כ עובדים" value={String(employees.filter((e) => e.active).length)} />
-          <Stat label="עובדים בעבודה כעת" value={String(query.data?.working ?? 0)} />
-          <Stat label="שעות מאושרות החודש" value={approvedHours.toFixed(2)} />
-          <Stat label="שכר מאושר החודש" value={money(Math.round(payroll * 100) / 100)} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat label="סה״כ עובדים" value={String(employees.filter((e) => e.active).length)} />
+            <Stat
+              label="עובדים פעילים כעת"
+              value={String(live.length)}
+              onClick={() => setLiveFilter(liveFilter === "all" ? null : "all")}
+              active={liveFilter === "all"}
+            />
+            <Stat
+              label="עובדים מהמכללה"
+              value={String(fromSite.length)}
+              onClick={() => setLiveFilter(liveFilter === "site" ? null : "site")}
+              active={liveFilter === "site"}
+            />
+            <Stat
+              label="עובדים מהבית"
+              value={String(fromHome.length)}
+              onClick={() => setLiveFilter(liveFilter === "home" ? null : "home")}
+              active={liveFilter === "home"}
+            />
+            <Stat
+              label="בהפסקה כעת"
+              value={String(onBreak.length)}
+              onClick={() => setLiveFilter(liveFilter === "break" ? null : "break")}
+              active={liveFilter === "break"}
+            />
+            <Stat label="שעות מאושרות החודש" value={approvedHours.toFixed(2)} />
+            <Stat label="שכר מאושר החודש" value={money(Math.round(payroll * 100) / 100)} />
+          </div>
+
+          {liveFilter ? (
+            <div className="card-soft overflow-x-auto">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-secondary text-xs">
+                  <tr>
+                    <th className="p-3">עובד</th>
+                    <th className="p-3">מיקום עבודה</th>
+                    <th className="p-3">שעת כניסה</th>
+                    <th className="p-3">סטטוס</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => (
+                    <tr key={r.id} className="border-t">
+                      <td className="p-3 font-medium">{r.employee_name}</td>
+                      <td className="p-3">{r.work_mode === "home" ? "מהבית" : "מהמכללה"}</td>
+                      <td className="p-3">{fmtTime(r.entry_time)}</td>
+                      <td className="p-3">
+                        {r.on_break ? (
+                          <span className="text-warning">בהפסקה מאז {fmtTime(r.break_start)}</span>
+                        ) : (
+                          <span className="text-success">בעבודה</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                        אין עובדים בקטגוריה זו
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">לחצו על אחד הכרטיסים כדי לראות פירוט עובדים.</p>
+          )}
         </div>
       </TabsContent>
 
@@ -198,11 +280,30 @@ function AdminDashboard({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="card-soft p-4">
+function Stat({
+  label,
+  value,
+  onClick,
+  active,
+}: {
+  label: string;
+  value: string;
+  onClick?: () => void;
+  active?: boolean;
+}) {
+  const content = (
+    <>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-extrabold">{value}</p>
-    </div>
+    </>
+  );
+  if (!onClick) return <div className="card-soft p-4">{content}</div>;
+  return (
+    <button
+      onClick={onClick}
+      className={`card-soft p-4 text-right transition hover:border-primary ${active ? "ring-2 ring-primary" : ""}`}
+    >
+      {content}
+    </button>
   );
 }

@@ -38,7 +38,27 @@ export const adminOverview = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .is("exit_time", null)
       .not("entry_time", "is", null);
-    return { employees: employees ?? [], records: records ?? [], working: working ?? 0 };
+    const { data: openRows } = await db
+      .from("attendance")
+      .select("id, employee_id, work_mode, entry_time, employees(full_name), attendance_breaks(*)")
+      .is("exit_time", null)
+      .not("entry_time", "is", null)
+      .order("entry_time", { ascending: true });
+    const live = (openRows ?? []).map((r) => {
+      const breaks = (r as unknown as { attendance_breaks?: { start_time: string; end_time: string | null }[] })
+        .attendance_breaks ?? [];
+      const openBreak = breaks.find((b) => !b.end_time) ?? null;
+      return {
+        id: r.id,
+        employee_id: r.employee_id,
+        employee_name: (r as unknown as { employees?: { full_name: string } }).employees?.full_name ?? "",
+        work_mode: (r as unknown as { work_mode?: string }).work_mode ?? "site",
+        entry_time: r.entry_time,
+        on_break: !!openBreak,
+        break_start: openBreak?.start_time ?? null,
+      };
+    });
+    return { employees: employees ?? [], records: records ?? [], working: working ?? 0, live };
   });
 
 export const adminAttendance = createServerFn({ method: "POST" })
@@ -153,22 +173,32 @@ export const listQrCodes = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
-    const { data: rows } = await db.from("qr_codes").select("*").order("created_at", { ascending: false }).limit(30);
+    const { data: rows } = await db.from("qr_codes").select("*").order("created_at", { ascending: false }).limit(60);
     return rows ?? [];
   });
 
 export const createQrCode = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    tokenOnly.extend({ label: z.string().trim().max(60), valid_until: z.string().min(10) }).parse(d),
+    tokenOnly
+      .extend({
+        label: z.string().trim().max(60),
+        valid_until: z.string().min(10),
+        kind: z.enum(["qr", "home"]).default("qr"),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
-    await db.from("qr_codes").update({ active: false }).eq("active", true);
-    const token = "ATT-" + crypto.randomUUID();
+    await db.from("qr_codes").update({ active: false }).eq("active", true).eq("kind", data.kind);
+    const token =
+      data.kind === "home"
+        ? String(Math.floor(100000 + Math.random() * 900000))
+        : "ATT-" + crypto.randomUUID();
     const { error } = await db.from("qr_codes").insert({
       token,
       label: data.label,
+      kind: data.kind,
       valid_until: new Date(data.valid_until).toISOString(),
       active: true,
     });
@@ -181,7 +211,10 @@ export const setQrActive = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
-    if (data.active) await db.from("qr_codes").update({ active: false }).eq("active", true);
+    if (data.active) {
+      const { data: row } = await db.from("qr_codes").select("kind").eq("id", data.id).maybeSingle();
+      await db.from("qr_codes").update({ active: false }).eq("active", true).eq("kind", row?.kind ?? "qr");
+    }
     const { error } = await db.from("qr_codes").update({ active: data.active }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };

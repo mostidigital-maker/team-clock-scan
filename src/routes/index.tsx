@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Coffee, LogIn, LogOut, MapPin, Play, ShieldCheck } from "lucide-react";
+import { ChevronDown, Coffee, Home, LogIn, LogOut, MapPin, Play, ShieldCheck, Building2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { QrScanDialog } from "@/components/QrScanDialog";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { getPosition } from "@/lib/geo";
@@ -130,6 +131,9 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
   const breakFn = useServerFn(employeeBreak);
   const qc = useQueryClient();
   const [scan, setScan] = useState<null | "in" | "out">(null);
+  const [codePrompt, setCodePrompt] = useState<null | "in" | "out">(null);
+  const [homeCode, setHomeCode] = useState("");
+  const [mode, setMode] = useState<"site" | "home">("site");
   const [busy, setBusy] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
 
@@ -151,33 +155,60 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
 
   const { employee, records, openRecord, finishedToday, openBreak } = query.data;
   const status = openRecord ? "בעבודה" : finishedToday ? "סיימת עבודה" : "לא התחלת עבודה";
+  const activeMode = (openRecord ? ((openRecord as { work_mode?: string }).work_mode ?? "site") : mode) as
+    | "site"
+    | "home";
+
+  const startPunch = (type: "in" | "out") => {
+    const m = type === "in" ? mode : activeMode;
+    if (m === "home") {
+      setHomeCode("");
+      setCodePrompt(type);
+    } else {
+      setScan(type);
+    }
+  };
 
   const approved = records.filter((r) => r.status === "approved");
   const deductBreaks = companySettings.data?.deduct_breaks ?? true;
   const approvedHours = approved.reduce((s, r) => s + hoursOf(r, deductBreaks), 0);
 
-  const handleScan = async (value: string) => {
-    const type = scan;
-    setScan(null);
-    if (!type) return;
+  const submitPunch = async (value: string, type: "in" | "out", m: "site" | "home") => {
     setBusy(true);
     try {
-      const pos = await getPosition();
-      await punch({ data: { token, qrToken: value, type, latitude: pos.latitude, longitude: pos.longitude } });
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      if (m === "site") {
+        const pos = await getPosition();
+        latitude = pos.latitude;
+        longitude = pos.longitude;
+      }
+      await punch({ data: { token, qrToken: value.trim(), type, mode: m, latitude, longitude } });
       toast.success(type === "in" ? "הכניסה נרשמה בהצלחה" : "היציאה נרשמה בהצלחה");
       await qc.invalidateQueries({ queryKey: ["employee-state"] });
     } catch (e) {
       const msg = (e as Error).message;
       toast.error(
         msg.includes("QR_EXPIRED")
-          ? "הברקוד אינו בתוקף. פנו למנהל."
+          ? m === "home"
+            ? "הקוד אינו בתוקף. פנו למנהל."
+            : "הברקוד אינו בתוקף. פנו למנהל."
           : msg.includes("QR_INVALID")
-            ? "ברקוד לא מזוהה"
+            ? m === "home"
+              ? "קוד שגוי"
+              : "ברקוד לא מזוהה"
             : msg || "הפעולה נכשלה",
       );
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleScan = async (value: string) => {
+    const type = scan;
+    setScan(null);
+    if (!type) return;
+    await submitPunch(value, type, "site");
   };
 
   const handleBreak = async (action: "start" | "end") => {
@@ -227,10 +258,37 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
       </div>
 
       <div className="grid gap-3">
+        {!openRecord ? (
+          <div className="card-soft p-4">
+            <p className="text-sm font-medium">איפה אתם עובדים היום?</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={mode === "site" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setMode("site")}
+              >
+                <Building2 className="ms-2 size-4" /> מהמכללה
+              </Button>
+              <Button
+                type="button"
+                variant={mode === "home" ? "default" : "outline"}
+                className="h-12"
+                onClick={() => setMode("home")}
+              >
+                <Home className="ms-2 size-4" /> מהבית
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-center text-sm text-muted-foreground">
+            משמרת פעילה — {activeMode === "home" ? "עבודה מהבית" : "עבודה מהמכללה"}
+          </p>
+        )}
         <Button
           className="h-20 w-full bg-success text-lg font-bold text-success-foreground hover:bg-success/90"
           disabled={!!openRecord || busy}
-          onClick={() => setScan("in")}
+          onClick={() => startPunch("in")}
         >
           <LogIn className="ms-2 size-6" /> כניסה
         </Button>
@@ -248,12 +306,18 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
         <Button
           className="h-20 w-full bg-destructive text-lg font-bold text-destructive-foreground hover:bg-destructive/90"
           disabled={!openRecord || busy || !!openBreak}
-          onClick={() => setScan("out")}
+          onClick={() => startPunch("out")}
         >
           <LogOut className="ms-2 size-6" /> יציאה
         </Button>
         <p className="flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
-          <MapPin className="size-3" /> נדרשת סריקת הברקוד במקום העבודה ואישור מיקום
+          {activeMode === "home" ? (
+            <>נדרשת הזנת הקוד היומי שקיבלתם מהמנהל</>
+          ) : (
+            <>
+              <MapPin className="size-3" /> נדרשת סריקת הברקוד במקום העבודה ואישור מיקום
+            </>
+          )}
         </p>
       </div>
 
@@ -317,6 +381,41 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
         onClose={() => setScan(null)}
         onScan={handleScan}
       />
+
+      <Dialog open={codePrompt !== null} onOpenChange={(v) => !v && setCodePrompt(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-right">
+              {codePrompt === "in" ? "קוד עבודה מהבית — כניסה" : "קוד עבודה מהבית — יציאה"}
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            className="space-y-3"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const type = codePrompt;
+              const code = homeCode;
+              setCodePrompt(null);
+              if (type) await submitPunch(code, type, "home");
+            }}
+          >
+            <div className="space-y-2">
+              <Label>קוד יומי</Label>
+              <Input
+                inputMode="numeric"
+                autoFocus
+                className="text-center text-2xl tracking-widest"
+                value={homeCode}
+                onChange={(e) => setHomeCode(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="h-12 w-full text-base" disabled={busy}>
+              אישור
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
