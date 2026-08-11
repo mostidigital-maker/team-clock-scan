@@ -18,7 +18,6 @@ const empty = {
   id_number: "",
   hourly_wage: 0,
   travel: 0,
-  bonus: 0,
   active: true,
 };
 
@@ -62,7 +61,6 @@ export function EmployeesTab({ token }: { token: string }) {
               <th className="p-3">ת״ז</th>
               <th className="p-3">שכר שעתי</th>
               <th className="p-3">נסיעות</th>
-              <th className="p-3">בונוס</th>
               <th className="p-3">סטטוס</th>
               <th className="p-3"></th>
             </tr>
@@ -74,7 +72,6 @@ export function EmployeesTab({ token }: { token: string }) {
                 <td className="p-3">{e.id_number}</td>
                 <td className="p-3">{money(Number(e.hourly_wage))}</td>
                 <td className="p-3">{money(Number(e.travel))}</td>
-                <td className="p-3">{money(Number(e.bonus))}</td>
                 <td className="p-3">
                   <span className={e.active ? "text-success" : "text-muted-foreground"}>
                     {e.active ? "פעיל" : "לא פעיל"}
@@ -91,7 +88,6 @@ export function EmployeesTab({ token }: { token: string }) {
                         id_number: e.id_number,
                         hourly_wage: Number(e.hourly_wage),
                         travel: Number(e.travel),
-                        bonus: Number(e.bonus),
                         active: e.active,
                       })
                     }
@@ -103,7 +99,7 @@ export function EmployeesTab({ token }: { token: string }) {
             ))}
             {employees.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
                   אין עובדים עדיין
                 </td>
               </tr>
@@ -133,7 +129,7 @@ export function EmployeesTab({ token }: { token: string }) {
                 <Label>תעודת זהות</Label>
                 <Input value={form.id_number} onChange={(e) => setForm({ ...form, id_number: e.target.value })} required />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label>שכר שעתי</Label>
                   <Input
@@ -152,16 +148,10 @@ export function EmployeesTab({ token }: { token: string }) {
                     onChange={(e) => setForm({ ...form, travel: Number(e.target.value) })}
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label>בונוס</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.bonus}
-                    onChange={(e) => setForm({ ...form, bonus: Number(e.target.value) })}
-                  />
-                </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                הבונוס אינו קבוע — הוא מחושב אוטומטית לפי כמות המכירות ופוטנציאל ההכנסות של אותו חודש (לשונית שכר חודשי).
+              </p>
               <div className="flex items-center justify-between rounded-md border p-3">
                 <Label>עובד פעיל</Label>
                 <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
