@@ -347,11 +347,11 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold">בונוס משוער לחודש</p>
                 <p className="text-xl font-extrabold text-success">
-                  {money(computeBonus(state.data?.stats?.sales_count ?? 0, state.data?.stats?.potential_revenue ?? 0))}
+                  {money(computeBonus(query.data?.stats?.sales_count ?? 0, query.data?.stats?.potential_revenue ?? 0))}
                 </p>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                לפי {state.data?.stats?.sales_count ?? 0} מכירות החודש. הבונוס משוער בלבד, מתעדכן אחת לשבוע, אינו מדויק
+                לפי {query.data?.stats?.sales_count ?? 0} מכירות החודש. הבונוס משוער בלבד, מתעדכן אחת לשבוע, אינו מדויק
                 ותקף רק לחודש הקלנדרי הנוכחי — בכפוף לאישור סופי של המנהל.
               </p>
             </div>
