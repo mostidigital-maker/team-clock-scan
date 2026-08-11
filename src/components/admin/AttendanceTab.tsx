@@ -69,8 +69,8 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
           id: form!.id,
           employee_id: form!.employee_id,
           work_date: form!.work_date,
-          entry_time: form!.entry_time || null,
-          exit_time: form!.exit_time || null,
+          entry_time: form!.entry_time ? new Date(form!.entry_time).toISOString() : null,
+          exit_time: form!.exit_time ? new Date(form!.exit_time).toISOString() : null,
         },
       }),
     onSuccess: async () => {
