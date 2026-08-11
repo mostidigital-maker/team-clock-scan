@@ -97,3 +97,23 @@ export function statusLabel(s: string) {
 export function money(n: number) {
   return "₪" + n.toLocaleString("he-IL", { maximumFractionDigits: 2 });
 }
+
+export type MonthlyStats = {
+  employee_id: string;
+  month: string;
+  sales_count: number;
+  potential_revenue: number;
+};
+
+/** אחוז הבונוס לפי כמות המכירות בחודש */
+export function bonusRate(sales: number): number {
+  if (sales >= 16) return 0.06;
+  if (sales >= 10) return 0.05;
+  if (sales >= 5) return 0.04;
+  return 0.02;
+}
+
+export function computeBonus(sales: number, potential: number): number {
+  if (!sales || !potential) return 0;
+  return Math.round(potential * bonusRate(sales) * 100) / 100;
+}

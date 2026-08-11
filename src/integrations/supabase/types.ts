@@ -205,6 +205,44 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_monthly_stats: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          month: string
+          potential_revenue: number
+          sales_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          month: string
+          potential_revenue?: number
+          sales_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          month?: string
+          potential_revenue?: number
+          sales_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_monthly_stats_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           active: boolean

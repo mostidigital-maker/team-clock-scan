@@ -13,7 +13,7 @@ import { QrScanDialog } from "@/components/QrScanDialog";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { getPosition } from "@/lib/geo";
 import { employeeBreak, employeeLogin, employeePunch, employeeState, getCompany } from "@/lib/employee.functions";
-import { breakMinutes, currentMonth, fmtDate, fmtDuration, fmtTime, hoursOf, statusLabel } from "@/lib/shared";
+import { breakMinutes, computeBonus, currentMonth, fmtDate, fmtDuration, fmtTime, hoursOf, money, statusLabel } from "@/lib/shared";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -341,6 +341,19 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
                 <p className="text-xs text-muted-foreground">שעות מאושרות</p>
                 <p className="text-2xl font-extrabold">{approvedHours.toFixed(2)}</p>
               </div>
+            </div>
+
+            <div className="mt-3 rounded-lg border border-dashed p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold">בונוס משוער לחודש</p>
+                <p className="text-xl font-extrabold text-success">
+                  {money(computeBonus(query.data?.stats?.sales_count ?? 0, query.data?.stats?.potential_revenue ?? 0))}
+                </p>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                לפי {query.data?.stats?.sales_count ?? 0} מכירות החודש. הבונוס משוער בלבד, מתעדכן אחת לשבוע, אינו מדויק
+                ותקף רק לחודש הקלנדרי הנוכחי — בכפוף לאישור סופי של המנהל.
+              </p>
             </div>
 
             <div className="mt-4 space-y-2">

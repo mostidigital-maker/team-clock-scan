@@ -58,7 +58,41 @@ export const adminOverview = createServerFn({ method: "POST" })
         break_start: openBreak?.start_time ?? null,
       };
     });
-    return { employees: employees ?? [], records: records ?? [], working: working ?? 0, live };
+    const { data: stats } = await db
+      .from("employee_monthly_stats")
+      .select("employee_id, month, sales_count, potential_revenue")
+      .eq("month", data.month);
+    return { employees: employees ?? [], records: records ?? [], working: working ?? 0, live, stats: stats ?? [] };
+  });
+
+export const saveEmployeeStats = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    tokenOnly
+      .extend({
+        employee_id: z.string().uuid(),
+        month: z.string().regex(/^\d{4}-\d{2}$/),
+        sales_count: z.number().int().min(0).max(100000),
+        potential_revenue: z.number().min(0).max(100000000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { db, requireAdmin } = await import("./attendance.server");
+    await requireAdmin(data.token);
+    const { error } = await db
+      .from("employee_monthly_stats")
+      .upsert(
+        {
+          employee_id: data.employee_id,
+          month: data.month,
+          sales_count: data.sales_count,
+          potential_revenue: data.potential_revenue,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "employee_id,month" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const adminAttendance = createServerFn({ method: "POST" })
@@ -88,7 +122,6 @@ export const saveEmployee = createServerFn({ method: "POST" })
         id_number: z.string().trim().min(4).max(20),
         hourly_wage: z.number().min(0).max(10000),
         travel: z.number().min(0).max(100000),
-        bonus: z.number().min(0).max(1000000),
         active: z.boolean(),
       })
       .parse(d),

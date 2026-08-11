@@ -60,11 +60,21 @@ export const employeeState = createServerFn({ method: "POST" })
       .select("*")
       .eq("employee_id", emp.id)
       .eq("work_date", today);
+    const { data: stats } = await db
+      .from("employee_monthly_stats")
+      .select("sales_count, potential_revenue")
+      .eq("employee_id", emp.id)
+      .eq("month", data.month)
+      .maybeSingle();
     return {
       employee: { id: emp.id, full_name: emp.full_name, id_number: emp.id_number },
       records: records ?? [],
       openRecord: open ?? null,
       finishedToday: (todayRows ?? []).some((r) => r.exit_time),
+      stats: {
+        sales_count: Number(stats?.sales_count ?? 0),
+        potential_revenue: Number(stats?.potential_revenue ?? 0),
+      },
       openBreak:
         (open?.attendance_breaks ?? []).find((b: { end_time: string | null }) => !b.end_time) ?? null,
     };
