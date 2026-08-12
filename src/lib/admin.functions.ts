@@ -60,7 +60,7 @@ export const adminOverview = createServerFn({ method: "POST" })
     });
     const { data: stats } = await db
       .from("employee_monthly_stats")
-      .select("employee_id, month, sales_count, potential_revenue")
+      .select("employee_id, month, sales_count, potential_revenue, manager_bonus")
       .eq("month", data.month);
     return { employees: employees ?? [], records: records ?? [], working: working ?? 0, live, stats: stats ?? [] };
   });
@@ -73,6 +73,7 @@ export const saveEmployeeStats = createServerFn({ method: "POST" })
         month: z.string().regex(/^\d{4}-\d{2}$/),
         sales_count: z.number().int().min(0).max(100000),
         potential_revenue: z.number().min(0).max(100000000),
+        manager_bonus: z.number().min(0).max(100000000).default(0),
       })
       .parse(d),
   )
@@ -87,6 +88,7 @@ export const saveEmployeeStats = createServerFn({ method: "POST" })
           month: data.month,
           sales_count: data.sales_count,
           potential_revenue: data.potential_revenue,
+          manager_bonus: data.manager_bonus,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "employee_id,month" },

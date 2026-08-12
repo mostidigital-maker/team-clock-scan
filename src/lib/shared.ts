@@ -103,6 +103,7 @@ export type MonthlyStats = {
   month: string;
   sales_count: number;
   potential_revenue: number;
+  manager_bonus?: number;
 };
 
 /** אחוז הבונוס לפי כמות המכירות בחודש */
