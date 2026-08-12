@@ -56,6 +56,7 @@ export const adminOverview = createServerFn({ method: "POST" })
         entry_time: r.entry_time,
         on_break: !!openBreak,
         break_start: openBreak?.start_time ?? null,
+        breaks: [...breaks].sort((a, b) => a.start_time.localeCompare(b.start_time)),
       };
     });
     const { data: stats } = await db

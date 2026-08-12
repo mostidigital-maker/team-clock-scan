@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
@@ -16,7 +16,7 @@ import { PayrollTab } from "@/components/admin/PayrollTab";
 import { SettingsTab } from "@/components/admin/SettingsTab";
 import { adminLogin, adminOverview } from "@/lib/admin.functions";
 import { getCompany } from "@/lib/employee.functions";
-import { currentMonth, fmtTime, hoursOf, money, type AttendanceRow, type Employee } from "@/lib/shared";
+import { currentMonth, fmtDuration, fmtTime, hoursOf, money, type AttendanceRow, type Employee } from "@/lib/shared";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -144,6 +144,7 @@ function AdminDashboard({
     refetchInterval: 60000,
   });
   const [liveFilter, setLiveFilter] = useState<null | "all" | "site" | "home" | "break">(null);
+  const [openLog, setOpenLog] = useState<string | null>(null);
 
   useEffect(() => {
     if (query.error) {
@@ -168,6 +169,7 @@ function AdminDashboard({
     entry_time: string | null;
     on_break: boolean;
     break_start: string | null;
+    breaks?: { start_time: string; end_time: string | null }[];
   };
   const live = (query.data?.live ?? []) as LiveRow[];
   const fromHome = live.filter((r) => r.work_mode === "home");
@@ -228,11 +230,19 @@ function AdminDashboard({
                     <th className="p-3">מיקום עבודה</th>
                     <th className="p-3">שעת כניסה</th>
                     <th className="p-3">סטטוס</th>
+                    <th className="p-3">הפסקות</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r) => (
-                    <tr key={r.id} className="border-t">
+                  {filtered.map((r) => {
+                    const brs = r.breaks ?? [];
+                    const total = brs.reduce(
+                      (s, b) => s + ((b.end_time ? new Date(b.end_time).getTime() : Date.now()) - new Date(b.start_time).getTime()) / 60000,
+                      0,
+                    );
+                    return (
+                    <Fragment key={r.id}>
+                    <tr className="border-t">
                       <td className="p-3 font-medium">{r.employee_name}</td>
                       <td className="p-3">{r.work_mode === "home" ? "מהבית" : "מהמכללה"}</td>
                       <td className="p-3">{fmtTime(r.entry_time)}</td>
@@ -243,11 +253,49 @@ function AdminDashboard({
                           <span className="text-success">בעבודה</span>
                         )}
                       </td>
+                      <td className="p-3">
+                        {brs.length ? (
+                          <button
+                            className="text-primary underline"
+                            onClick={() => setOpenLog(openLog === r.id ? null : r.id)}
+                          >
+                            {brs.length} · {fmtDuration(Math.round(total))} {openLog === r.id ? "▲" : "▼"}
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                     </tr>
-                  ))}
+                    {openLog === r.id && brs.length ? (
+                      <tr className="border-t bg-secondary/40">
+                        <td colSpan={5} className="p-3">
+                          <ul className="space-y-1 text-xs">
+                            {brs.map((b, i) => (
+                              <li key={i} className="flex flex-wrap gap-3">
+                                <span className="font-medium">הפסקה {i + 1}</span>
+                                <span>יציאה: {fmtTime(b.start_time)}</span>
+                                <span>חזרה: {b.end_time ? fmtTime(b.end_time) : "בהפסקה כעת"}</span>
+                                <span>
+                                  משך:{" "}
+                                  {fmtDuration(
+                                    Math.round(
+                                      ((b.end_time ? new Date(b.end_time).getTime() : Date.now()) -
+                                        new Date(b.start_time).getTime()) /
+                                        60000,
+                                    ),
+                                  )}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                      </tr>
+                    ) : null}
+                    </Fragment>
+                  );})}
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                      <td colSpan={5} className="p-6 text-center text-muted-foreground">
                         אין עובדים בקטגוריה זו
                       </td>
                     </tr>
