@@ -16,7 +16,7 @@ import { PayrollTab } from "@/components/admin/PayrollTab";
 import { SettingsTab } from "@/components/admin/SettingsTab";
 import { adminLogin, adminOverview } from "@/lib/admin.functions";
 import { getCompany } from "@/lib/employee.functions";
-import { currentMonth, fmtTime, hoursOf, money, type AttendanceRow, type Employee } from "@/lib/shared";
+import { currentMonth, fmtDuration, fmtTime, hoursOf, money, type AttendanceRow, type Employee } from "@/lib/shared";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -144,6 +144,7 @@ function AdminDashboard({
     refetchInterval: 60000,
   });
   const [liveFilter, setLiveFilter] = useState<null | "all" | "site" | "home" | "break">(null);
+  const [openLog, setOpenLog] = useState<string | null>(null);
 
   useEffect(() => {
     if (query.error) {
@@ -168,6 +169,7 @@ function AdminDashboard({
     entry_time: string | null;
     on_break: boolean;
     break_start: string | null;
+    breaks?: { start_time: string; end_time: string | null }[];
   };
   const live = (query.data?.live ?? []) as LiveRow[];
   const fromHome = live.filter((r) => r.work_mode === "home");
