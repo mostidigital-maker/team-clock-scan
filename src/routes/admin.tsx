@@ -230,10 +230,18 @@ function AdminDashboard({
                     <th className="p-3">מיקום עבודה</th>
                     <th className="p-3">שעת כניסה</th>
                     <th className="p-3">סטטוס</th>
+                    <th className="p-3">הפסקות</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r) => (
+                  {filtered.map((r) => {
+                    const brs = r.breaks ?? [];
+                    const total = brs.reduce(
+                      (s, b) => s + ((b.end_time ? new Date(b.end_time).getTime() : Date.now()) - new Date(b.start_time).getTime()) / 60000,
+                      0,
+                    );
+                    return (
+                    <>
                     <tr key={r.id} className="border-t">
                       <td className="p-3 font-medium">{r.employee_name}</td>
                       <td className="p-3">{r.work_mode === "home" ? "מהבית" : "מהמכללה"}</td>
@@ -245,11 +253,49 @@ function AdminDashboard({
                           <span className="text-success">בעבודה</span>
                         )}
                       </td>
+                      <td className="p-3">
+                        {brs.length ? (
+                          <button
+                            className="text-primary underline"
+                            onClick={() => setOpenLog(openLog === r.id ? null : r.id)}
+                          >
+                            {brs.length} · {fmtDuration(Math.round(total))} {openLog === r.id ? "▲" : "▼"}
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                     </tr>
-                  ))}
+                    {openLog === r.id && brs.length ? (
+                      <tr key={`${r.id}-log`} className="border-t bg-secondary/40">
+                        <td colSpan={5} className="p-3">
+                          <ul className="space-y-1 text-xs">
+                            {brs.map((b, i) => (
+                              <li key={i} className="flex flex-wrap gap-3">
+                                <span className="font-medium">הפסקה {i + 1}</span>
+                                <span>יציאה: {fmtTime(b.start_time)}</span>
+                                <span>חזרה: {b.end_time ? fmtTime(b.end_time) : "בהפסקה כעת"}</span>
+                                <span>
+                                  משך:{" "}
+                                  {fmtDuration(
+                                    Math.round(
+                                      ((b.end_time ? new Date(b.end_time).getTime() : Date.now()) -
+                                        new Date(b.start_time).getTime()) /
+                                        60000,
+                                    ),
+                                  )}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                      </tr>
+                    ) : null}
+                    </>
+                  );})}
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                      <td colSpan={5} className="p-6 text-center text-muted-foreground">
                         אין עובדים בקטגוריה זו
                       </td>
                     </tr>
