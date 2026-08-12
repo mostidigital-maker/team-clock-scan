@@ -210,6 +210,7 @@ export type Database = {
           created_at: string
           employee_id: string
           id: string
+          manager_bonus: number
           month: string
           potential_revenue: number
           sales_count: number
@@ -219,6 +220,7 @@ export type Database = {
           created_at?: string
           employee_id: string
           id?: string
+          manager_bonus?: number
           month: string
           potential_revenue?: number
           sales_count?: number
@@ -228,6 +230,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           id?: string
+          manager_bonus?: number
           month?: string
           potential_revenue?: number
           sales_count?: number
