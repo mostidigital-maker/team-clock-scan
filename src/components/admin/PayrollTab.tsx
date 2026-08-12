@@ -34,15 +34,16 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
   const records = (query.data?.records ?? []) as AttendanceRow[];
   const stats = (query.data?.stats ?? []) as MonthlyStats[];
 
-  const [draft, setDraft] = useState<Record<string, { sales: string; potential: string }>>({});
+  const [draft, setDraft] = useState<Record<string, { sales: string; potential: string; manager: string }>>({});
 
   useEffect(() => {
-    const next: Record<string, { sales: string; potential: string }> = {};
+    const next: Record<string, { sales: string; potential: string; manager: string }> = {};
     for (const e of employees) {
       const s = stats.find((x) => x.employee_id === e.id);
       next[e.id] = {
         sales: String(Number(s?.sales_count ?? 0)),
         potential: String(Number(s?.potential_revenue ?? 0)),
+        manager: String(Number(s?.manager_bonus ?? 0)),
       };
     }
     setDraft(next);
@@ -50,7 +51,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
   }, [query.dataUpdatedAt, month]);
 
   const mutation = useMutation({
-    mutationFn: (v: { employee_id: string; sales_count: number; potential_revenue: number }) =>
+    mutationFn: (v: { employee_id: string; sales_count: number; potential_revenue: number; manager_bonus: number }) =>
       saveStats({ data: { token, month, ...v } }),
     onSuccess: async () => {
       toast.success("נתוני המכירות נשמרו");
@@ -66,6 +67,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     const d = draft[e.id];
     const sales = Number(d?.sales ?? 0) || 0;
     const potential = Number(d?.potential ?? 0) || 0;
+    const managerBonus = Number(d?.manager ?? 0) || 0;
     const bonus = computeBonus(sales, potential);
     return {
       id: e.id,
@@ -77,8 +79,9 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
       sales,
       potential,
       bonus,
+      managerBonus,
       travel: Number(e.travel),
-      total: Math.round((base + bonus + Number(e.travel)) * 100) / 100,
+      total: Math.round((base + bonus + managerBonus + Number(e.travel)) * 100) / 100,
     };
   });
 
@@ -94,6 +97,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
         "פוטנציאל הכנסות",
         "אחוז בונוס",
         "בונוס",
+        "בונוס מנהל",
         "נסיעות",
         "סה״כ ברוטו",
       ],
@@ -107,6 +111,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
         r.potential,
         `${bonusRate(r.sales) * 100}%`,
         r.bonus,
+        r.managerBonus,
         r.travel,
         r.total,
       ]),
@@ -139,6 +144,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
               <th className="p-3">מכירות</th>
               <th className="p-3">פוטנציאל הכנסות</th>
               <th className="p-3">בונוס</th>
+              <th className="p-3">בונוס מנהל</th>
               <th className="p-3">נסיעות</th>
               <th className="p-3">סה״כ ברוטו</th>
               <th className="p-3"></th>
@@ -179,6 +185,18 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
                   {money(r.bonus)}
                   <span className="block text-xs text-muted-foreground">{bonusRate(r.sales) * 100}%</span>
                 </td>
+                <td className="p-3">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-24"
+                    value={draft[r.id]?.manager ?? "0"}
+                    onChange={(e) =>
+                      setDraft((p) => ({ ...p, [r.id]: { ...p[r.id]!, manager: e.target.value } }))
+                    }
+                  />
+                </td>
                 <td className="p-3">{money(r.travel)}</td>
                 <td className="p-3 font-bold">{money(r.total)}</td>
                 <td className="p-3">
@@ -191,6 +209,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
                         employee_id: r.id,
                         sales_count: Math.max(0, Math.round(r.sales)),
                         potential_revenue: Math.max(0, r.potential),
+                        manager_bonus: Math.max(0, r.managerBonus),
                       })
                     }
                   >
@@ -202,7 +221,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
           </tbody>
           <tfoot>
             <tr className="border-t bg-secondary font-bold">
-              <td className="p-3" colSpan={9}>
+              <td className="p-3" colSpan={10}>
                 סה״כ
               </td>
               <td className="p-3">{money(Math.round(grandTotal * 100) / 100)}</td>
@@ -216,6 +235,9 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
       </p>
       <p className="text-xs text-muted-foreground">
         * הבונוס מחושב מסך פוטנציאל ההכנסות של אותו חודש: עד 4 מכירות 2%, 5–9 מכירות 4%, 10–15 מכירות 5%, 16 ומעלה 6%.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        * בונוס מנהל נקבע ידנית, נכלל בסה״כ ברוטו ואינו מוצג לנציג.
       </p>
     </div>
   );

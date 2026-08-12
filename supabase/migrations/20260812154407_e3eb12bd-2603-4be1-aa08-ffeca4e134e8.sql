@@ -1,0 +1,1 @@
+ALTER TABLE public.employee_monthly_stats ADD COLUMN IF NOT EXISTS manager_bonus numeric NOT NULL DEFAULT 0;
