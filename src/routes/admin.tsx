@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
@@ -241,8 +241,8 @@ function AdminDashboard({
                       0,
                     );
                     return (
-                    <>
-                    <tr key={r.id} className="border-t">
+                    <Fragment key={r.id}>
+                    <tr className="border-t">
                       <td className="p-3 font-medium">{r.employee_name}</td>
                       <td className="p-3">{r.work_mode === "home" ? "מהבית" : "מהמכללה"}</td>
                       <td className="p-3">{fmtTime(r.entry_time)}</td>
@@ -267,7 +267,7 @@ function AdminDashboard({
                       </td>
                     </tr>
                     {openLog === r.id && brs.length ? (
-                      <tr key={`${r.id}-log`} className="border-t bg-secondary/40">
+                      <tr className="border-t bg-secondary/40">
                         <td colSpan={5} className="p-3">
                           <ul className="space-y-1 text-xs">
                             {brs.map((b, i) => (
@@ -291,7 +291,7 @@ function AdminDashboard({
                         </td>
                       </tr>
                     ) : null}
-                    </>
+                    </Fragment>
                   );})}
                   {filtered.length === 0 ? (
                     <tr>
