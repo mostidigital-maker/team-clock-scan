@@ -119,6 +119,7 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
             <tr>
               <th className="p-3">עובד</th>
               <th className="p-3">תאריך</th>
+              <th className="p-3">מקום עבודה</th>
               <th className="p-3">כניסה</th>
               <th className="p-3">יציאה</th>
               <th className="p-3">הפסקות</th>
@@ -133,6 +134,15 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
               <tr key={r.id} className="border-t">
                 <td className="p-3 font-medium">{r.employee_name}</td>
                 <td className="p-3">{fmtDate(r.work_date)}</td>
+                <td className="p-3">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs ${
+                      r.work_mode === "home" ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"
+                    }`}
+                  >
+                    {r.work_mode === "home" ? "מהבית" : "מהמכללה"}
+                  </span>
+                </td>
                 <td className="p-3">{fmtTime(r.entry_time)}</td>
                 <td className="p-3">{fmtTime(r.exit_time)}</td>
                 <td className="p-3">
@@ -211,7 +221,7 @@ export function AttendanceTab({ token, month, setMonth }: { token: string; month
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="p-6 text-center text-muted-foreground">
+                <td colSpan={10} className="p-6 text-center text-muted-foreground">
                   אין רישומים בחודש זה
                 </td>
               </tr>
