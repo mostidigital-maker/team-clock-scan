@@ -182,6 +182,16 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
         const pos = await getPosition();
         latitude = pos.latitude;
         longitude = pos.longitude;
+      } else {
+        // עבודה מהבית: מנסים לצרף מיקום, אך אם אין הרשאה הדיווח ממשיך כרגיל
+        try {
+          const pos = await getPosition();
+          latitude = pos.latitude;
+          longitude = pos.longitude;
+        } catch {
+          latitude = null;
+          longitude = null;
+        }
       }
       await punch({ data: { token, qrToken: value.trim(), type, mode: m, latitude, longitude } });
       toast.success(type === "in" ? "הכניסה נרשמה בהצלחה" : "היציאה נרשמה בהצלחה");
