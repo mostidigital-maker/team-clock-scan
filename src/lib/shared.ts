@@ -30,6 +30,9 @@ export type Employee = {
   travel: number;
   bonus: number;
   active: boolean;
+  pay_type?: string;
+  monthly_salary?: number;
+  comp_model_id?: string | null;
 };
 
 export type QrCode = {
