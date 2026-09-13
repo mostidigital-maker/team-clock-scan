@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { adminOverview, saveEmployee } from "@/lib/admin.functions";
-import { currentMonth, money, type Employee } from "@/lib/shared";
+import { currentMonth, money, type CompModel, type Employee } from "@/lib/shared";
 
 const empty = {
   id: null as string | null,
@@ -19,6 +19,9 @@ const empty = {
   hourly_wage: 0,
   travel: 0,
   active: true,
+  pay_type: "hourly" as "hourly" | "monthly",
+  monthly_salary: 0,
+  comp_model_id: null as string | null,
 };
 
 export function EmployeesTab({ token }: { token: string }) {
@@ -43,6 +46,9 @@ export function EmployeesTab({ token }: { token: string }) {
   });
 
   const employees = (query.data?.employees ?? []) as Employee[];
+  const models = (query.data?.models ?? []) as CompModel[];
+  const modelName = (id: string | null | undefined) =>
+    id ? (models.find((m) => m.id === id)?.name ?? "—") : "ללא מודל";
 
   return (
     <div className="space-y-4">
@@ -59,8 +65,10 @@ export function EmployeesTab({ token }: { token: string }) {
             <tr>
               <th className="p-3">שם</th>
               <th className="p-3">ת״ז</th>
-              <th className="p-3">שכר שעתי</th>
+              <th className="p-3">סוג תשלום</th>
+              <th className="p-3">שכר</th>
               <th className="p-3">נסיעות</th>
+              <th className="p-3">מודל תגמול</th>
               <th className="p-3">סטטוס</th>
               <th className="p-3"></th>
             </tr>
@@ -70,8 +78,14 @@ export function EmployeesTab({ token }: { token: string }) {
               <tr key={e.id} className="border-t">
                 <td className="p-3 font-medium">{e.full_name}</td>
                 <td className="p-3">{e.id_number}</td>
-                <td className="p-3">{money(Number(e.hourly_wage))}</td>
+                <td className="p-3">{e.pay_type === "monthly" ? "שכר חודשי" : "לפי שעות"}</td>
+                <td className="p-3">
+                  {e.pay_type === "monthly"
+                    ? `${money(Number(e.monthly_salary ?? 0))} לחודש`
+                    : `${money(Number(e.hourly_wage))} לשעה`}
+                </td>
                 <td className="p-3">{money(Number(e.travel))}</td>
+                <td className="p-3">{modelName(e.comp_model_id)}</td>
                 <td className="p-3">
                   <span className={e.active ? "text-success" : "text-muted-foreground"}>
                     {e.active ? "פעיל" : "לא פעיל"}
@@ -89,6 +103,9 @@ export function EmployeesTab({ token }: { token: string }) {
                         hourly_wage: Number(e.hourly_wage),
                         travel: Number(e.travel),
                         active: e.active,
+                        pay_type: e.pay_type === "monthly" ? "monthly" : "hourly",
+                        monthly_salary: Number(e.monthly_salary ?? 0),
+                        comp_model_id: e.comp_model_id ?? null,
                       })
                     }
                   >
@@ -99,7 +116,7 @@ export function EmployeesTab({ token }: { token: string }) {
             ))}
             {employees.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                <td colSpan={8} className="p-6 text-center text-muted-foreground">
                   אין עובדים עדיין
                 </td>
               </tr>
@@ -129,16 +146,39 @@ export function EmployeesTab({ token }: { token: string }) {
                 <Label>תעודת זהות</Label>
                 <Input value={form.id_number} onChange={(e) => setForm({ ...form, id_number: e.target.value })} required />
               </div>
+              <div className="space-y-1">
+                <Label>סוג תשלום</Label>
+                <select
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={form.pay_type}
+                  onChange={(e) => setForm({ ...form, pay_type: e.target.value as "hourly" | "monthly" })}
+                >
+                  <option value="hourly">לפי שעות</option>
+                  <option value="monthly">שכר חודשי קבוע</option>
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>שכר שעתי</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.hourly_wage}
-                    onChange={(e) => setForm({ ...form, hourly_wage: Number(e.target.value) })}
-                  />
-                </div>
+                {form.pay_type === "monthly" ? (
+                  <div className="space-y-1">
+                    <Label>שכר חודשי</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.monthly_salary}
+                      onChange={(e) => setForm({ ...form, monthly_salary: Number(e.target.value) })}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Label>שכר שעתי</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.hourly_wage}
+                      onChange={(e) => setForm({ ...form, hourly_wage: Number(e.target.value) })}
+                    />
+                  </div>
+                )}
                 <div className="space-y-1">
                   <Label>נסיעות</Label>
                   <Input
@@ -149,9 +189,26 @@ export function EmployeesTab({ token }: { token: string }) {
                   />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                הבונוס אינו קבוע — הוא מחושב אוטומטית לפי כמות המכירות ופוטנציאל ההכנסות של אותו חודש (לשונית שכר חודשי).
-              </p>
+              <div className="space-y-1">
+                <Label>מודל תגמול</Label>
+                <select
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={form.comp_model_id ?? ""}
+                  onChange={(e) => setForm({ ...form, comp_model_id: e.target.value || null })}
+                >
+                  <option value="">ללא מודל תגמול</option>
+                  {models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                      {m.active ? "" : " (לא פעיל)"}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  הבונוס מחושב אוטומטית לפי המודל שנבחר, כמות המכירות ופוטנציאל ההכנסות של אותו חודש (לשונית שכר).
+                  מודלים נוספים נוצרים בלשונית "מודלי תגמול".
+                </p>
+              </div>
               <div className="flex items-center justify-between rounded-md border p-3">
                 <Label>עובד פעיל</Label>
                 <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
