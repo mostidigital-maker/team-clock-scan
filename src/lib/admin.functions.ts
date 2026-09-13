@@ -91,12 +91,7 @@ export const adminOverview = createServerFn({ method: "POST" })
       working: working ?? 0,
       live,
       stats: stats ?? [],
-      models: (models ?? []).map((m) => ({
-        id: m.id,
-        name: m.name,
-        active: m.active,
-        tiers: ((m as unknown as { comp_model_tiers?: unknown[] }).comp_model_tiers ?? []) as unknown[],
-      })),
+      models: mapModels(models),
     };
   });
 
