@@ -101,12 +101,7 @@ export const listCompModels = createServerFn({ method: "POST" })
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
     const { data: models } = await db.from("comp_models").select("*, comp_model_tiers(*)").order("created_at");
-    return (models ?? []).map((m) => ({
-      id: m.id,
-      name: m.name,
-      active: m.active,
-      tiers: ((m as unknown as { comp_model_tiers?: unknown[] }).comp_model_tiers ?? []) as unknown[],
-    }));
+    return mapModels(models);
   });
 
 export const saveCompModel = createServerFn({ method: "POST" })
