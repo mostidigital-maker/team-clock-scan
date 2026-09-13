@@ -66,15 +66,50 @@ export const employeeState = createServerFn({ method: "POST" })
       .eq("employee_id", emp.id)
       .eq("month", data.month)
       .maybeSingle();
+
+    const sales = Number(stats?.sales_count ?? 0);
+    const potential = Number(stats?.potential_revenue ?? 0);
+    let bonus = 0;
+    let modelName: string | null = null;
+    const modelId = (emp as unknown as { comp_model_id?: string | null }).comp_model_id ?? null;
+    if (modelId) {
+      const { data: model } = await db
+        .from("comp_models")
+        .select("name, active, comp_model_tiers(min_sales, max_sales, kind, value)")
+        .eq("id", modelId)
+        .maybeSingle();
+      if (model && model.active) {
+        modelName = model.name;
+        const tiers = (
+          (model as unknown as {
+            comp_model_tiers?: { min_sales: number; max_sales: number | null; kind: string; value: number }[];
+          }).comp_model_tiers ?? []
+        )
+          .slice()
+          .sort((a, b) => Number(a.min_sales) - Number(b.min_sales));
+        const tier = tiers.find(
+          (t) => sales >= Number(t.min_sales) && (t.max_sales === null || sales <= Number(t.max_sales)),
+        );
+        if (tier) {
+          bonus =
+            tier.kind === "fixed"
+              ? Math.round(Number(tier.value) * 100) / 100
+              : Math.round(potential * (Number(tier.value) / 100) * 100) / 100;
+        }
+      }
+    }
+
     return {
       employee: { id: emp.id, full_name: emp.full_name, id_number: emp.id_number },
       records: records ?? [],
       openRecord: open ?? null,
       finishedToday: (todayRows ?? []).some((r) => r.exit_time),
       stats: {
-        sales_count: Number(stats?.sales_count ?? 0),
-        potential_revenue: Number(stats?.potential_revenue ?? 0),
+        sales_count: sales,
+        potential_revenue: potential,
       },
+      bonus,
+      modelName,
       openBreak:
         (open?.attendance_breaks ?? []).find((b: { end_time: string | null }) => !b.end_time) ?? null,
     };

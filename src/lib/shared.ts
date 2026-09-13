@@ -30,6 +30,9 @@ export type Employee = {
   travel: number;
   bonus: number;
   active: boolean;
+  pay_type?: string;
+  monthly_salary?: number;
+  comp_model_id?: string | null;
 };
 
 export type QrCode = {
@@ -106,15 +109,48 @@ export type MonthlyStats = {
   manager_bonus?: number;
 };
 
-/** אחוז הבונוס לפי כמות המכירות בחודש */
-export function bonusRate(sales: number): number {
-  if (sales >= 16) return 0.06;
-  if (sales >= 10) return 0.05;
-  if (sales >= 5) return 0.04;
-  return 0.02;
+export type CompTier = {
+  id?: string;
+  min_sales: number;
+  max_sales: number | null;
+  kind: "percent" | "fixed";
+  value: number;
+};
+
+export type CompModel = {
+  id: string;
+  name: string;
+  active: boolean;
+  tiers: CompTier[];
+};
+
+export function sortTiers(tiers: CompTier[]): CompTier[] {
+  return [...tiers].sort((a, b) => Number(a.min_sales) - Number(b.min_sales));
 }
 
-export function computeBonus(sales: number, potential: number): number {
-  if (!sales || !potential) return 0;
-  return Math.round(potential * bonusRate(sales) * 100) / 100;
+export function findTier(tiers: CompTier[], sales: number): CompTier | null {
+  return (
+    sortTiers(tiers).find(
+      (t) => sales >= Number(t.min_sales) && (t.max_sales === null || sales <= Number(t.max_sales)),
+    ) ?? null
+  );
+}
+
+/** בונוס לפי מודל התגמול של העובד */
+export function modelBonus(model: CompModel | null | undefined, sales: number, potential: number): number {
+  if (!model) return 0;
+  const tier = findTier(model.tiers ?? [], sales);
+  if (!tier) return 0;
+  if (tier.kind === "fixed") return Math.round(Number(tier.value) * 100) / 100;
+  if (!potential) return 0;
+  return Math.round(potential * (Number(tier.value) / 100) * 100) / 100;
+}
+
+export function tierLabel(tier: CompTier | null): string {
+  if (!tier) return "—";
+  return tier.kind === "fixed" ? money(Number(tier.value)) : `${Number(tier.value)}%`;
+}
+
+export function tierRange(tier: CompTier): string {
+  return tier.max_sales === null ? `${tier.min_sales}+` : `${tier.min_sales}–${tier.max_sales}`;
 }

@@ -3,6 +3,24 @@ import { z } from "zod";
 
 const tokenOnly = z.object({ token: z.string().min(10) });
 
+type RawTier = { id: string; min_sales: number; max_sales: number | null; kind: string; value: number };
+type RawModel = { id: string; name: string; active: boolean; comp_model_tiers?: RawTier[] | null };
+
+function mapModels(rows: unknown) {
+  return ((rows ?? []) as RawModel[]).map((m) => ({
+    id: m.id,
+    name: m.name,
+    active: m.active,
+    tiers: (m.comp_model_tiers ?? []).map((t) => ({
+      id: t.id,
+      min_sales: Number(t.min_sales),
+      max_sales: t.max_sales === null || t.max_sales === undefined ? null : Number(t.max_sales),
+      kind: t.kind === "fixed" ? ("fixed" as const) : ("percent" as const),
+      value: Number(t.value),
+    })),
+  }));
+}
+
 export const adminLogin = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ username: z.string().trim().min(2).max(40), password: z.string().min(4).max(100) }).parse(d),
@@ -63,7 +81,86 @@ export const adminOverview = createServerFn({ method: "POST" })
       .from("employee_monthly_stats")
       .select("employee_id, month, sales_count, potential_revenue, manager_bonus")
       .eq("month", data.month);
-    return { employees: employees ?? [], records: records ?? [], working: working ?? 0, live, stats: stats ?? [] };
+    const { data: models } = await db
+      .from("comp_models")
+      .select("*, comp_model_tiers(*)")
+      .order("created_at");
+    return {
+      employees: employees ?? [],
+      records: records ?? [],
+      working: working ?? 0,
+      live,
+      stats: stats ?? [],
+      models: mapModels(models),
+    };
+  });
+
+export const listCompModels = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => tokenOnly.parse(d))
+  .handler(async ({ data }) => {
+    const { db, requireAdmin } = await import("./attendance.server");
+    await requireAdmin(data.token);
+    const { data: models } = await db.from("comp_models").select("*, comp_model_tiers(*)").order("created_at");
+    return mapModels(models);
+  });
+
+export const saveCompModel = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    tokenOnly
+      .extend({
+        id: z.string().uuid().nullable(),
+        name: z.string().trim().min(2).max(60),
+        active: z.boolean().default(true),
+        tiers: z
+          .array(
+            z.object({
+              min_sales: z.number().int().min(0).max(100000),
+              max_sales: z.number().int().min(0).max(100000).nullable(),
+              kind: z.enum(["percent", "fixed"]),
+              value: z.number().min(0).max(100000000),
+            }),
+          )
+          .max(30),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { db, requireAdmin } = await import("./attendance.server");
+    await requireAdmin(data.token);
+    let modelId = data.id;
+    if (modelId) {
+      const { error } = await db
+        .from("comp_models")
+        .update({ name: data.name, active: data.active, updated_at: new Date().toISOString() })
+        .eq("id", modelId);
+      if (error) throw new Error(error.message);
+    } else {
+      const { data: created, error } = await db
+        .from("comp_models")
+        .insert({ name: data.name, active: data.active })
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      modelId = created.id;
+    }
+    await db.from("comp_model_tiers").delete().eq("model_id", modelId!);
+    if (data.tiers.length) {
+      const { error } = await db
+        .from("comp_model_tiers")
+        .insert(data.tiers.map((t) => ({ ...t, model_id: modelId! })));
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true, id: modelId };
+  });
+
+export const deleteCompModel = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => tokenOnly.extend({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { db, requireAdmin } = await import("./attendance.server");
+    await requireAdmin(data.token);
+    const { error } = await db.from("comp_models").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const saveEmployeeStats = createServerFn({ method: "POST" })
@@ -126,6 +223,9 @@ export const saveEmployee = createServerFn({ method: "POST" })
         hourly_wage: z.number().min(0).max(10000),
         travel: z.number().min(0).max(100000),
         active: z.boolean(),
+        pay_type: z.enum(["hourly", "monthly"]).default("hourly"),
+        monthly_salary: z.number().min(0).max(10000000).default(0),
+        comp_model_id: z.string().uuid().nullable().default(null),
       })
       .parse(d),
   )

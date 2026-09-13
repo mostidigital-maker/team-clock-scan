@@ -181,6 +181,68 @@ export type Database = {
           },
         ]
       }
+      comp_model_tiers: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          max_sales: number | null
+          min_sales: number
+          model_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          max_sales?: number | null
+          min_sales?: number
+          model_id: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          max_sales?: number | null
+          min_sales?: number
+          model_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comp_model_tiers_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "comp_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comp_models: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       company_settings: {
         Row: {
           company_name: string
@@ -250,34 +312,51 @@ export type Database = {
         Row: {
           active: boolean
           bonus: number
+          comp_model_id: string | null
           created_at: string
           full_name: string
           hourly_wage: number
           id: string
           id_number: string
+          monthly_salary: number
+          pay_type: string
           travel: number
         }
         Insert: {
           active?: boolean
           bonus?: number
+          comp_model_id?: string | null
           created_at?: string
           full_name: string
           hourly_wage?: number
           id?: string
           id_number: string
+          monthly_salary?: number
+          pay_type?: string
           travel?: number
         }
         Update: {
           active?: boolean
           bonus?: number
+          comp_model_id?: string | null
           created_at?: string
           full_name?: string
           hourly_wage?: number
           id?: string
           id_number?: string
+          monthly_salary?: number
+          pay_type?: string
           travel?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_comp_model_id_fkey"
+            columns: ["comp_model_id"]
+            isOneToOne: false
+            referencedRelation: "comp_models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       qr_codes: {
         Row: {
