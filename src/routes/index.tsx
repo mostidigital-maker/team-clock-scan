@@ -353,18 +353,18 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
               </div>
             </div>
 
-            <div className="mt-3 rounded-lg border border-dashed p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-bold">בונוס משוער לחודש</p>
-                <p className="text-xl font-extrabold text-success">
-                  {money(query.data?.bonus ?? 0)}
+            {query.data?.modelName ? (
+              <div className="mt-3 rounded-lg border border-dashed p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold">בונוס משוער לחודש</p>
+                  <p className="text-xl font-extrabold text-success">{money(query.data?.bonus ?? 0)}</p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  לפי {query.data?.stats?.sales_count ?? 0} מכירות החודש ({query.data.modelName}). הבונוס משוער בלבד,
+                  מתעדכן אחת לשבוע, אינו מדויק ותקף רק לחודש הקלנדרי הנוכחי — בכפוף לאישור סופי של המנהל.
                 </p>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                לפי {query.data?.stats?.sales_count ?? 0} מכירות החודש. הבונוס משוער בלבד, מתעדכן אחת לשבוע, אינו מדויק
-                ותקף רק לחודש הקלנדרי הנוכחי — בכפוף לאישור סופי של המנהל.
-              </p>
-            </div>
+            ) : null}
 
             <div className="mt-4 space-y-2">
               {records.length === 0 ? (
