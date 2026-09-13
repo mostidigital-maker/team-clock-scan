@@ -13,7 +13,7 @@ import { QrScanDialog } from "@/components/QrScanDialog";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { getPosition } from "@/lib/geo";
 import { employeeBreak, employeeLogin, employeePunch, employeeState, getCompany } from "@/lib/employee.functions";
-import { breakMinutes, computeBonus, currentMonth, fmtDate, fmtDuration, fmtTime, hoursOf, money, statusLabel } from "@/lib/shared";
+import { breakMinutes, currentMonth, fmtDate, fmtDuration, fmtTime, hoursOf, money, statusLabel } from "@/lib/shared";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -357,7 +357,7 @@ function AttendanceScreen({ token, onInvalid }: { token: string; onInvalid: () =
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold">בונוס משוער לחודש</p>
                 <p className="text-xl font-extrabold text-success">
-                  {money(computeBonus(query.data?.stats?.sales_count ?? 0, query.data?.stats?.potential_revenue ?? 0))}
+                  {money(query.data?.bonus ?? 0)}
                 </p>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
