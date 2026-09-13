@@ -3,6 +3,24 @@ import { z } from "zod";
 
 const tokenOnly = z.object({ token: z.string().min(10) });
 
+type RawTier = { id: string; min_sales: number; max_sales: number | null; kind: string; value: number };
+type RawModel = { id: string; name: string; active: boolean; comp_model_tiers?: RawTier[] | null };
+
+function mapModels(rows: unknown) {
+  return ((rows ?? []) as RawModel[]).map((m) => ({
+    id: m.id,
+    name: m.name,
+    active: m.active,
+    tiers: (m.comp_model_tiers ?? []).map((t) => ({
+      id: t.id,
+      min_sales: Number(t.min_sales),
+      max_sales: t.max_sales === null || t.max_sales === undefined ? null : Number(t.max_sales),
+      kind: t.kind === "fixed" ? ("fixed" as const) : ("percent" as const),
+      value: Number(t.value),
+    })),
+  }));
+}
+
 export const adminLogin = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ username: z.string().trim().min(2).max(40), password: z.string().min(4).max(100) }).parse(d),
