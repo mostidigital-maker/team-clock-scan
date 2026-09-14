@@ -13,6 +13,7 @@ import { EmployeesTab } from "@/components/admin/EmployeesTab";
 import { AttendanceTab } from "@/components/admin/AttendanceTab";
 import { QrTab } from "@/components/admin/QrTab";
 import { PayrollTab } from "@/components/admin/PayrollTab";
+import { CompModelsTab } from "@/components/admin/CompModelsTab";
 import { SettingsTab } from "@/components/admin/SettingsTab";
 import { adminLogin, adminOverview } from "@/lib/admin.functions";
 import { getCompany } from "@/lib/employee.functions";
@@ -186,6 +187,7 @@ function AdminDashboard({
         <TabsTrigger value="attendance">נוכחות</TabsTrigger>
         <TabsTrigger value="qr">ברקוד</TabsTrigger>
         <TabsTrigger value="payroll">שכר</TabsTrigger>
+        <TabsTrigger value="models">מודלי תגמול</TabsTrigger>
         <TabsTrigger value="settings">הגדרות</TabsTrigger>
       </TabsList>
 
@@ -320,6 +322,9 @@ function AdminDashboard({
       </TabsContent>
       <TabsContent value="payroll">
         <PayrollTab token={token} month={month} setMonth={setMonth} />
+      </TabsContent>
+      <TabsContent value="models">
+        <CompModelsTab token={token} />
       </TabsContent>
       <TabsContent value="settings">
         <SettingsTab token={token} />
