@@ -181,6 +181,38 @@ export type Database = {
           },
         ]
       }
+      comp_model_rates: {
+        Row: {
+          created_at: string
+          id: string
+          model_id: string
+          name: string
+          percent: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          model_id: string
+          name?: string
+          percent?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          model_id?: string
+          name?: string
+          percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comp_model_rates_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "comp_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comp_model_tiers: {
         Row: {
           created_at: string
@@ -224,21 +256,27 @@ export type Database = {
           active: boolean
           created_at: string
           id: string
+          kind: string
           name: string
+          percent: number
           updated_at: string
         }
         Insert: {
           active?: boolean
           created_at?: string
           id?: string
+          kind?: string
           name: string
+          percent?: number
           updated_at?: string
         }
         Update: {
           active?: boolean
           created_at?: string
           id?: string
+          kind?: string
           name?: string
+          percent?: number
           updated_at?: string
         }
         Relationships: []
@@ -275,6 +313,7 @@ export type Database = {
           manager_bonus: number
           month: string
           potential_revenue: number
+          revenue_by_type: Json
           sales_count: number
           updated_at: string
         }
@@ -285,6 +324,7 @@ export type Database = {
           manager_bonus?: number
           month: string
           potential_revenue?: number
+          revenue_by_type?: Json
           sales_count?: number
           updated_at?: string
         }
@@ -295,6 +335,7 @@ export type Database = {
           manager_bonus?: number
           month?: string
           potential_revenue?: number
+          revenue_by_type?: Json
           sales_count?: number
           updated_at?: string
         }
