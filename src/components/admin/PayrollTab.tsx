@@ -10,11 +10,13 @@ import { adminOverview, saveEmployeeStats } from "@/lib/admin.functions";
 import { getCompany } from "@/lib/employee.functions";
 import { downloadCsv } from "@/lib/csv";
 import {
-  bonusRate,
-  computeBonus,
+  findTier,
   hoursOf,
+  modelBonus,
   money,
+  tierLabel,
   type AttendanceRow,
+  type CompModel,
   type Employee,
   type MonthlyStats,
 } from "@/lib/shared";
@@ -33,6 +35,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
   const employees = (query.data?.employees ?? []) as Employee[];
   const records = (query.data?.records ?? []) as AttendanceRow[];
   const stats = (query.data?.stats ?? []) as MonthlyStats[];
+  const models = (query.data?.models ?? []) as CompModel[];
 
   const [draft, setDraft] = useState<Record<string, { sales: string; potential: string; manager: string }>>({});
 
@@ -63,21 +66,27 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
   const rows = employees.map((e) => {
     const approved = records.filter((r) => r.employee_id === e.id && r.status === "approved");
     const hours = approved.reduce((s, r) => s + hoursOf(r, deductBreaks), 0);
-    const base = hours * Number(e.hourly_wage);
+    const monthly = e.pay_type === "monthly";
+    const base = monthly ? Number(e.monthly_salary ?? 0) : hours * Number(e.hourly_wage);
     const d = draft[e.id];
     const sales = Number(d?.sales ?? 0) || 0;
     const potential = Number(d?.potential ?? 0) || 0;
     const managerBonus = Number(d?.manager ?? 0) || 0;
-    const bonus = computeBonus(sales, potential);
+    const model = models.find((m) => m.id === e.comp_model_id) ?? null;
+    const bonus = modelBonus(model, sales, potential);
     return {
       id: e.id,
       name: e.full_name,
+      idNumber: e.id_number,
       days: approved.length,
       hours: Math.round(hours * 100) / 100,
-      wage: Number(e.hourly_wage),
+      payLabel: monthly ? "חודשי" : "שעתי",
+      wage: monthly ? Number(e.monthly_salary ?? 0) : Number(e.hourly_wage),
       base: Math.round(base * 100) / 100,
       sales,
       potential,
+      modelName: model ? model.name : "ללא מודל",
+      tierText: model ? tierLabel(findTier(model.tiers ?? [], sales)) : "—",
       bonus,
       managerBonus,
       travel: Number(e.travel),
@@ -89,13 +98,16 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     downloadCsv(`payroll-${month}.csv`, [
       [
         "עובד",
+        "ת״ז",
+        "סוג תשלום",
         "ימים מאושרים",
         "שעות מאושרות",
-        "שכר שעתי",
+        "תעריף / שכר חודשי",
         "שכר בסיס",
+        "מודל תגמול",
         "מכירות",
         "פוטנציאל הכנסות",
-        "אחוז בונוס",
+        "מדרגת תגמול",
         "בונוס",
         "בונוס מנהל",
         "נסיעות",
@@ -103,13 +115,16 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
       ],
       ...rows.map((r) => [
         r.name,
+        r.idNumber,
+        r.payLabel,
         r.days,
         r.hours,
         r.wage,
         r.base,
+        r.modelName,
         r.sales,
         r.potential,
-        `${bonusRate(r.sales) * 100}%`,
+        r.tierText,
         r.bonus,
         r.managerBonus,
         r.travel,
@@ -137,10 +152,12 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
           <thead className="bg-secondary text-xs">
             <tr>
               <th className="p-3">עובד</th>
+              <th className="p-3">ת״ז</th>
               <th className="p-3">ימים</th>
               <th className="p-3">שעות</th>
-              <th className="p-3">שכר שעתי</th>
+              <th className="p-3">תעריף</th>
               <th className="p-3">שכר בסיס</th>
+              <th className="p-3">מודל</th>
               <th className="p-3">מכירות</th>
               <th className="p-3">פוטנציאל הכנסות</th>
               <th className="p-3">בונוס</th>
@@ -154,19 +171,22 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
             {rows.map((r) => (
               <tr key={r.id} className="border-t">
                 <td className="p-3 font-medium">{r.name}</td>
+                <td className="p-3">{r.idNumber}</td>
                 <td className="p-3">{r.days}</td>
                 <td className="p-3">{r.hours.toFixed(2)}</td>
-                <td className="p-3">{money(r.wage)}</td>
+                <td className="p-3">
+                  {money(r.wage)}
+                  <span className="block text-xs text-muted-foreground">{r.payLabel}</span>
+                </td>
                 <td className="p-3">{money(r.base)}</td>
+                <td className="p-3 text-xs">{r.modelName}</td>
                 <td className="p-3">
                   <Input
                     type="number"
                     min="0"
                     className="w-20"
                     value={draft[r.id]?.sales ?? "0"}
-                    onChange={(e) =>
-                      setDraft((p) => ({ ...p, [r.id]: { ...p[r.id]!, sales: e.target.value } }))
-                    }
+                    onChange={(e) => setDraft((p) => ({ ...p, [r.id]: { ...p[r.id]!, sales: e.target.value } }))}
                   />
                 </td>
                 <td className="p-3">
@@ -176,14 +196,12 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
                     step="0.01"
                     className="w-28"
                     value={draft[r.id]?.potential ?? "0"}
-                    onChange={(e) =>
-                      setDraft((p) => ({ ...p, [r.id]: { ...p[r.id]!, potential: e.target.value } }))
-                    }
+                    onChange={(e) => setDraft((p) => ({ ...p, [r.id]: { ...p[r.id]!, potential: e.target.value } }))}
                   />
                 </td>
                 <td className="p-3">
                   {money(r.bonus)}
-                  <span className="block text-xs text-muted-foreground">{bonusRate(r.sales) * 100}%</span>
+                  <span className="block text-xs text-muted-foreground">{r.tierText}</span>
                 </td>
                 <td className="p-3">
                   <Input
@@ -192,9 +210,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
                     step="0.01"
                     className="w-24"
                     value={draft[r.id]?.manager ?? "0"}
-                    onChange={(e) =>
-                      setDraft((p) => ({ ...p, [r.id]: { ...p[r.id]!, manager: e.target.value } }))
-                    }
+                    onChange={(e) => setDraft((p) => ({ ...p, [r.id]: { ...p[r.id]!, manager: e.target.value } }))}
                   />
                 </td>
                 <td className="p-3">{money(r.travel)}</td>
@@ -221,7 +237,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
           </tbody>
           <tfoot>
             <tr className="border-t bg-secondary font-bold">
-              <td className="p-3" colSpan={10}>
+              <td className="p-3" colSpan={12}>
                 סה״כ
               </td>
               <td className="p-3">{money(Math.round(grandTotal * 100) / 100)}</td>
@@ -234,11 +250,9 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
         * רק שעות שאושרו נכללות בחישוב. {deductBreaks ? "זמן ההפסקות מנוכה מסך השעות." : "זמן ההפסקות אינו מנוכה מסך השעות."}
       </p>
       <p className="text-xs text-muted-foreground">
-        * הבונוס מחושב מסך פוטנציאל ההכנסות של אותו חודש: עד 4 מכירות 2%, 5–9 מכירות 4%, 10–15 מכירות 5%, 16 ומעלה 6%.
+        * הבונוס מחושב לפי מודל התגמול של העובד (מדרגות באחוזים מפוטנציאל ההכנסות או סכום קבוע). עובד ללא מודל אינו מקבל בונוס.
       </p>
-      <p className="text-xs text-muted-foreground">
-        * בונוס מנהל נקבע ידנית, נכלל בסה״כ ברוטו ואינו מוצג לנציג.
-      </p>
+      <p className="text-xs text-muted-foreground">* בונוס מנהל נקבע ידנית, נכלל בסה״כ ברוטו ואינו מוצג לנציג.</p>
     </div>
   );
 }
