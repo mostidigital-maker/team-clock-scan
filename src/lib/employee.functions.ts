@@ -83,7 +83,7 @@ export const employeeState = createServerFn({ method: "POST" })
         .eq("id", modelId)
         .maybeSingle();
       if (model && model.active) {
-        const { mapModelRow } = await import("./comp-model-map");
+        
         modelName = model.name;
         bonus = modelBonus(mapModelRow(model), sales, potential, revenue);
       }
