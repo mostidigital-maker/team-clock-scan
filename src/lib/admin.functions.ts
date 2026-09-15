@@ -131,16 +131,22 @@ export const saveCompModel = createServerFn({ method: "POST" })
         id: z.string().uuid().nullable(),
         name: z.string().trim().min(2).max(60),
         active: z.boolean().default(true),
+        kind: z.enum(["tiers", "commission", "management"]).default("tiers"),
+        percent: z.number().min(0).max(100).default(0),
         tiers: z
           .array(
             z.object({
-              min_sales: z.number().int().min(0).max(100000),
-              max_sales: z.number().int().min(0).max(100000).nullable(),
+              min_sales: z.number().int().min(0).max(100000000),
+              max_sales: z.number().int().min(0).max(100000000).nullable(),
               kind: z.enum(["percent", "fixed"]),
               value: z.number().min(0).max(100000000),
             }),
           )
           .max(30),
+        rates: z
+          .array(z.object({ name: z.string().trim().min(1).max(40), percent: z.number().min(0).max(100) }))
+          .max(30)
+          .default([]),
       })
       .parse(d),
   )
@@ -148,18 +154,15 @@ export const saveCompModel = createServerFn({ method: "POST" })
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
     let modelId = data.id;
+    const base = { name: data.name, active: data.active, kind: data.kind, percent: data.percent };
     if (modelId) {
       const { error } = await db
         .from("comp_models")
-        .update({ name: data.name, active: data.active, updated_at: new Date().toISOString() })
+        .update({ ...base, updated_at: new Date().toISOString() })
         .eq("id", modelId);
       if (error) throw new Error(error.message);
     } else {
-      const { data: created, error } = await db
-        .from("comp_models")
-        .insert({ name: data.name, active: data.active })
-        .select("id")
-        .single();
+      const { data: created, error } = await db.from("comp_models").insert(base).select("id").single();
       if (error) throw new Error(error.message);
       modelId = created.id;
     }
@@ -168,6 +171,13 @@ export const saveCompModel = createServerFn({ method: "POST" })
       const { error } = await db
         .from("comp_model_tiers")
         .insert(data.tiers.map((t) => ({ ...t, model_id: modelId! })));
+      if (error) throw new Error(error.message);
+    }
+    await db.from("comp_model_rates").delete().eq("model_id", modelId!);
+    if (data.rates.length) {
+      const { error } = await db
+        .from("comp_model_rates")
+        .insert(data.rates.map((r) => ({ ...r, model_id: modelId! })));
       if (error) throw new Error(error.message);
     }
     return { ok: true, id: modelId };
