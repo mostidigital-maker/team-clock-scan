@@ -4,13 +4,29 @@ import { z } from "zod";
 const tokenOnly = z.object({ token: z.string().min(10) });
 
 type RawTier = { id: string; min_sales: number; max_sales: number | null; kind: string; value: number };
-type RawModel = { id: string; name: string; active: boolean; comp_model_tiers?: RawTier[] | null };
+type RawRate = { id: string; name: string; percent: number };
+type RawModel = {
+  id: string;
+  name: string;
+  active: boolean;
+  kind?: string;
+  percent?: number;
+  comp_model_tiers?: RawTier[] | null;
+  comp_model_rates?: RawRate[] | null;
+};
 
 function mapModels(rows: unknown) {
   return ((rows ?? []) as RawModel[]).map((m) => ({
     id: m.id,
     name: m.name,
     active: m.active,
+    kind:
+      m.kind === "commission"
+        ? ("commission" as const)
+        : m.kind === "management"
+          ? ("management" as const)
+          : ("tiers" as const),
+    percent: Number(m.percent ?? 0),
     tiers: (m.comp_model_tiers ?? []).map((t) => ({
       id: t.id,
       min_sales: Number(t.min_sales),
@@ -18,6 +34,7 @@ function mapModels(rows: unknown) {
       kind: t.kind === "fixed" ? ("fixed" as const) : ("percent" as const),
       value: Number(t.value),
     })),
+    rates: (m.comp_model_rates ?? []).map((r) => ({ id: r.id, name: r.name, percent: Number(r.percent) })),
   }));
 }
 
@@ -79,11 +96,11 @@ export const adminOverview = createServerFn({ method: "POST" })
     });
     const { data: stats } = await db
       .from("employee_monthly_stats")
-      .select("employee_id, month, sales_count, potential_revenue, manager_bonus")
+      .select("employee_id, month, sales_count, potential_revenue, manager_bonus, revenue_by_type")
       .eq("month", data.month);
     const { data: models } = await db
       .from("comp_models")
-      .select("*, comp_model_tiers(*)")
+      .select("*, comp_model_tiers(*), comp_model_rates(*)")
       .order("created_at");
     return {
       employees: employees ?? [],
@@ -100,7 +117,10 @@ export const listCompModels = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
-    const { data: models } = await db.from("comp_models").select("*, comp_model_tiers(*)").order("created_at");
+    const { data: models } = await db
+      .from("comp_models")
+      .select("*, comp_model_tiers(*), comp_model_rates(*)")
+      .order("created_at");
     return mapModels(models);
   });
 
@@ -111,16 +131,22 @@ export const saveCompModel = createServerFn({ method: "POST" })
         id: z.string().uuid().nullable(),
         name: z.string().trim().min(2).max(60),
         active: z.boolean().default(true),
+        kind: z.enum(["tiers", "commission", "management"]).default("tiers"),
+        percent: z.number().min(0).max(100).default(0),
         tiers: z
           .array(
             z.object({
-              min_sales: z.number().int().min(0).max(100000),
-              max_sales: z.number().int().min(0).max(100000).nullable(),
+              min_sales: z.number().int().min(0).max(100000000),
+              max_sales: z.number().int().min(0).max(100000000).nullable(),
               kind: z.enum(["percent", "fixed"]),
               value: z.number().min(0).max(100000000),
             }),
           )
           .max(30),
+        rates: z
+          .array(z.object({ name: z.string().trim().min(1).max(40), percent: z.number().min(0).max(100) }))
+          .max(30)
+          .default([]),
       })
       .parse(d),
   )
@@ -128,18 +154,15 @@ export const saveCompModel = createServerFn({ method: "POST" })
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
     let modelId = data.id;
+    const base = { name: data.name, active: data.active, kind: data.kind, percent: data.percent };
     if (modelId) {
       const { error } = await db
         .from("comp_models")
-        .update({ name: data.name, active: data.active, updated_at: new Date().toISOString() })
+        .update({ ...base, updated_at: new Date().toISOString() })
         .eq("id", modelId);
       if (error) throw new Error(error.message);
     } else {
-      const { data: created, error } = await db
-        .from("comp_models")
-        .insert({ name: data.name, active: data.active })
-        .select("id")
-        .single();
+      const { data: created, error } = await db.from("comp_models").insert(base).select("id").single();
       if (error) throw new Error(error.message);
       modelId = created.id;
     }
@@ -148,6 +171,13 @@ export const saveCompModel = createServerFn({ method: "POST" })
       const { error } = await db
         .from("comp_model_tiers")
         .insert(data.tiers.map((t) => ({ ...t, model_id: modelId! })));
+      if (error) throw new Error(error.message);
+    }
+    await db.from("comp_model_rates").delete().eq("model_id", modelId!);
+    if (data.rates.length) {
+      const { error } = await db
+        .from("comp_model_rates")
+        .insert(data.rates.map((r) => ({ ...r, model_id: modelId! })));
       if (error) throw new Error(error.message);
     }
     return { ok: true, id: modelId };
@@ -172,6 +202,7 @@ export const saveEmployeeStats = createServerFn({ method: "POST" })
         sales_count: z.number().int().min(0).max(100000),
         potential_revenue: z.number().min(0).max(100000000),
         manager_bonus: z.number().min(0).max(100000000).default(0),
+        revenue_by_type: z.record(z.string(), z.number().min(0).max(100000000)).default({}),
       })
       .parse(d),
   )
@@ -187,6 +218,7 @@ export const saveEmployeeStats = createServerFn({ method: "POST" })
           sales_count: data.sales_count,
           potential_revenue: data.potential_revenue,
           manager_bonus: data.manager_bonus,
+          revenue_by_type: data.revenue_by_type,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "employee_id,month" },
@@ -223,7 +255,7 @@ export const saveEmployee = createServerFn({ method: "POST" })
         hourly_wage: z.number().min(0).max(10000),
         travel: z.number().min(0).max(100000),
         active: z.boolean(),
-        pay_type: z.enum(["hourly", "monthly"]).default("hourly"),
+        pay_type: z.enum(["hourly", "monthly", "commission"]).default("hourly"),
         monthly_salary: z.number().min(0).max(10000000).default(0),
         comp_model_id: z.string().uuid().nullable().default(null),
       })

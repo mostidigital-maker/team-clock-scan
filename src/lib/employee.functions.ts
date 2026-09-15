@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { mapModelRow, modelBonus } from "./shared";
+
 export const getCompany = createServerFn({ method: "GET" }).handler(async () => {
   const { db } = await import("./attendance.server");
   const { data } = await db
@@ -62,40 +64,28 @@ export const employeeState = createServerFn({ method: "POST" })
       .eq("work_date", today);
     const { data: stats } = await db
       .from("employee_monthly_stats")
-      .select("sales_count, potential_revenue")
+      .select("sales_count, potential_revenue, revenue_by_type")
       .eq("employee_id", emp.id)
       .eq("month", data.month)
       .maybeSingle();
 
     const sales = Number(stats?.sales_count ?? 0);
     const potential = Number(stats?.potential_revenue ?? 0);
+    const revenue = ((stats as unknown as { revenue_by_type?: Record<string, number> | null })?.revenue_by_type ??
+      {}) as Record<string, number>;
     let bonus = 0;
     let modelName: string | null = null;
     const modelId = (emp as unknown as { comp_model_id?: string | null }).comp_model_id ?? null;
     if (modelId) {
       const { data: model } = await db
         .from("comp_models")
-        .select("name, active, comp_model_tiers(min_sales, max_sales, kind, value)")
+        .select("name, active, kind, percent, comp_model_tiers(*), comp_model_rates(*)")
         .eq("id", modelId)
         .maybeSingle();
       if (model && model.active) {
+        
         modelName = model.name;
-        const tiers = (
-          (model as unknown as {
-            comp_model_tiers?: { min_sales: number; max_sales: number | null; kind: string; value: number }[];
-          }).comp_model_tiers ?? []
-        )
-          .slice()
-          .sort((a, b) => Number(a.min_sales) - Number(b.min_sales));
-        const tier = tiers.find(
-          (t) => sales >= Number(t.min_sales) && (t.max_sales === null || sales <= Number(t.max_sales)),
-        );
-        if (tier) {
-          bonus =
-            tier.kind === "fixed"
-              ? Math.round(Number(tier.value) * 100) / 100
-              : Math.round(potential * (Number(tier.value) / 100) * 100) / 100;
-        }
+        bonus = modelBonus(mapModelRow(model), sales, potential, revenue);
       }
     }
 

@@ -107,6 +107,7 @@ export type MonthlyStats = {
   sales_count: number;
   potential_revenue: number;
   manager_bonus?: number;
+  revenue_by_type?: Record<string, number> | null;
 };
 
 export type CompTier = {
@@ -117,11 +118,28 @@ export type CompTier = {
   value: number;
 };
 
+export type CompRate = {
+  id?: string;
+  name: string;
+  percent: number;
+};
+
+export type CompModelKind = "tiers" | "commission" | "management";
+
 export type CompModel = {
   id: string;
   name: string;
   active: boolean;
+  kind: CompModelKind;
+  percent: number;
   tiers: CompTier[];
+  rates: CompRate[];
+};
+
+export const modelKindLabel: Record<CompModelKind, string> = {
+  tiers: "מדרגות לפי כמות מכירות",
+  commission: "עמלות לפי סוג הכנסה",
+  management: "מודל הנהלה (אחוז + סכום לפי מדרגה)",
 };
 
 export function sortTiers(tiers: CompTier[]): CompTier[] {
@@ -136,9 +154,36 @@ export function findTier(tiers: CompTier[], sales: number): CompTier | null {
   );
 }
 
+export function revenueTotal(revenue: Record<string, number> | null | undefined): number {
+  return Object.values(revenue ?? {}).reduce((s, v) => s + (Number(v) || 0), 0);
+}
+
+/** עמלות לפי סוגי הכנסה */
+export function commissionBonus(model: CompModel, revenue: Record<string, number> | null | undefined): number {
+  const r = revenue ?? {};
+  const sum = (model.rates ?? []).reduce(
+    (s, rate) => s + (Number(r[rate.name]) || 0) * (Number(rate.percent) / 100),
+    0,
+  );
+  return Math.round(sum * 100) / 100;
+}
+
 /** בונוס לפי מודל התגמול של העובד */
-export function modelBonus(model: CompModel | null | undefined, sales: number, potential: number): number {
+export function modelBonus(
+  model: CompModel | null | undefined,
+  sales: number,
+  potential: number,
+  revenue?: Record<string, number> | null,
+): number {
   if (!model) return 0;
+  const kind = model.kind ?? "tiers";
+  if (kind === "commission") return commissionBonus(model, revenue);
+  if (kind === "management") {
+    const base = potential * (Number(model.percent ?? 0) / 100);
+    const tier = findTier(model.tiers ?? [], revenueTotal(revenue) || potential);
+    const fixed = tier ? (tier.kind === "fixed" ? Number(tier.value) : potential * (Number(tier.value) / 100)) : 0;
+    return Math.round((base + fixed) * 100) / 100;
+  }
   const tier = findTier(model.tiers ?? [], sales);
   if (!tier) return 0;
   if (tier.kind === "fixed") return Math.round(Number(tier.value) * 100) / 100;
@@ -153,4 +198,33 @@ export function tierLabel(tier: CompTier | null): string {
 
 export function tierRange(tier: CompTier): string {
   return tier.max_sales === null ? `${tier.min_sales}+` : `${tier.min_sales}–${tier.max_sales}`;
+}
+type RawModelRow = {
+  id?: string;
+  name?: string;
+  active?: boolean;
+  kind?: string | null;
+  percent?: number | null;
+  comp_model_tiers?: { id?: string; min_sales: number; max_sales: number | null; kind: string; value: number }[] | null;
+  comp_model_rates?: { id?: string; name: string; percent: number }[] | null;
+};
+
+/** המרת שורת מודל מבסיס הנתונים לטיפוס CompModel */
+export function mapModelRow(row: RawModelRow): CompModel {
+  const kind: CompModelKind =
+    row.kind === "commission" ? "commission" : row.kind === "management" ? "management" : "tiers";
+  return {
+    id: row.id ?? "",
+    name: row.name ?? "",
+    active: row.active ?? true,
+    kind,
+    percent: Number(row.percent ?? 0),
+    tiers: (row.comp_model_tiers ?? []).map((t) => ({
+      min_sales: Number(t.min_sales),
+      max_sales: t.max_sales === null || t.max_sales === undefined ? null : Number(t.max_sales),
+      kind: t.kind === "fixed" ? ("fixed" as const) : ("percent" as const),
+      value: Number(t.value),
+    })),
+    rates: (row.comp_model_rates ?? []).map((r) => ({ name: r.name, percent: Number(r.percent) })),
+  };
 }
