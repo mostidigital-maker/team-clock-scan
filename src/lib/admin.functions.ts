@@ -255,7 +255,7 @@ export const saveEmployee = createServerFn({ method: "POST" })
         hourly_wage: z.number().min(0).max(10000),
         travel: z.number().min(0).max(100000),
         active: z.boolean(),
-        pay_type: z.enum(["hourly", "monthly"]).default("hourly"),
+        pay_type: z.enum(["hourly", "monthly", "commission"]).default("hourly"),
         monthly_salary: z.number().min(0).max(10000000).default(0),
         comp_model_id: z.string().uuid().nullable().default(null),
       })
