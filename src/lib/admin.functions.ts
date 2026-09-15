@@ -96,11 +96,11 @@ export const adminOverview = createServerFn({ method: "POST" })
     });
     const { data: stats } = await db
       .from("employee_monthly_stats")
-      .select("employee_id, month, sales_count, potential_revenue, manager_bonus")
+      .select("employee_id, month, sales_count, potential_revenue, manager_bonus, revenue_by_type")
       .eq("month", data.month);
     const { data: models } = await db
       .from("comp_models")
-      .select("*, comp_model_tiers(*)")
+      .select("*, comp_model_tiers(*), comp_model_rates(*)")
       .order("created_at");
     return {
       employees: employees ?? [],
