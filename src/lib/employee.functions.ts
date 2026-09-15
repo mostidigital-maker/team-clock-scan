@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { mapModelRow, modelBonus } from "./shared";
+
 export const getCompany = createServerFn({ method: "GET" }).handler(async () => {
   const { db } = await import("./attendance.server");
   const { data } = await db
