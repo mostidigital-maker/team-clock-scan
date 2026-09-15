@@ -117,7 +117,10 @@ export const listCompModels = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { db, requireAdmin } = await import("./attendance.server");
     await requireAdmin(data.token);
-    const { data: models } = await db.from("comp_models").select("*, comp_model_tiers(*)").order("created_at");
+    const { data: models } = await db
+      .from("comp_models")
+      .select("*, comp_model_tiers(*), comp_model_rates(*)")
+      .order("created_at");
     return mapModels(models);
   });
 
