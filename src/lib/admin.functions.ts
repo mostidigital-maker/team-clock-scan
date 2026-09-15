@@ -202,6 +202,7 @@ export const saveEmployeeStats = createServerFn({ method: "POST" })
         sales_count: z.number().int().min(0).max(100000),
         potential_revenue: z.number().min(0).max(100000000),
         manager_bonus: z.number().min(0).max(100000000).default(0),
+        revenue_by_type: z.record(z.string(), z.number().min(0).max(100000000)).default({}),
       })
       .parse(d),
   )
@@ -217,6 +218,7 @@ export const saveEmployeeStats = createServerFn({ method: "POST" })
           sales_count: data.sales_count,
           potential_revenue: data.potential_revenue,
           manager_bonus: data.manager_bonus,
+          revenue_by_type: data.revenue_by_type,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "employee_id,month" },
