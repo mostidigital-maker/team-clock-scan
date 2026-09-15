@@ -199,3 +199,32 @@ export function tierLabel(tier: CompTier | null): string {
 export function tierRange(tier: CompTier): string {
   return tier.max_sales === null ? `${tier.min_sales}+` : `${tier.min_sales}–${tier.max_sales}`;
 }
+type RawModelRow = {
+  id?: string;
+  name?: string;
+  active?: boolean;
+  kind?: string | null;
+  percent?: number | null;
+  comp_model_tiers?: { id?: string; min_sales: number; max_sales: number | null; kind: string; value: number }[] | null;
+  comp_model_rates?: { id?: string; name: string; percent: number }[] | null;
+};
+
+/** המרת שורת מודל מבסיס הנתונים לטיפוס CompModel */
+export function mapModelRow(row: RawModelRow): CompModel {
+  const kind: CompModelKind =
+    row.kind === "commission" ? "commission" : row.kind === "management" ? "management" : "tiers";
+  return {
+    id: row.id ?? "",
+    name: row.name ?? "",
+    active: row.active ?? true,
+    kind,
+    percent: Number(row.percent ?? 0),
+    tiers: (row.comp_model_tiers ?? []).map((t) => ({
+      min_sales: Number(t.min_sales),
+      max_sales: t.max_sales === null || t.max_sales === undefined ? null : Number(t.max_sales),
+      kind: t.kind === "fixed" ? ("fixed" as const) : ("percent" as const),
+      value: Number(t.value),
+    })),
+    rates: (row.comp_model_rates ?? []).map((r) => ({ name: r.name, percent: Number(r.percent) })),
+  };
+}
