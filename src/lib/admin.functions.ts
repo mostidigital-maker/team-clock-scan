@@ -4,13 +4,29 @@ import { z } from "zod";
 const tokenOnly = z.object({ token: z.string().min(10) });
 
 type RawTier = { id: string; min_sales: number; max_sales: number | null; kind: string; value: number };
-type RawModel = { id: string; name: string; active: boolean; comp_model_tiers?: RawTier[] | null };
+type RawRate = { id: string; name: string; percent: number };
+type RawModel = {
+  id: string;
+  name: string;
+  active: boolean;
+  kind?: string;
+  percent?: number;
+  comp_model_tiers?: RawTier[] | null;
+  comp_model_rates?: RawRate[] | null;
+};
 
 function mapModels(rows: unknown) {
   return ((rows ?? []) as RawModel[]).map((m) => ({
     id: m.id,
     name: m.name,
     active: m.active,
+    kind:
+      m.kind === "commission"
+        ? ("commission" as const)
+        : m.kind === "management"
+          ? ("management" as const)
+          : ("tiers" as const),
+    percent: Number(m.percent ?? 0),
     tiers: (m.comp_model_tiers ?? []).map((t) => ({
       id: t.id,
       min_sales: Number(t.min_sales),
@@ -18,6 +34,7 @@ function mapModels(rows: unknown) {
       kind: t.kind === "fixed" ? ("fixed" as const) : ("percent" as const),
       value: Number(t.value),
     })),
+    rates: (m.comp_model_rates ?? []).map((r) => ({ id: r.id, name: r.name, percent: Number(r.percent) })),
   }));
 }
 
