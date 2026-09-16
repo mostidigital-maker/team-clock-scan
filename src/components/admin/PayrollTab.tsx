@@ -37,16 +37,23 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
   const stats = (query.data?.stats ?? []) as MonthlyStats[];
   const models = (query.data?.models ?? []) as CompModel[];
 
-  const [draft, setDraft] = useState<Record<string, { sales: string; potential: string; manager: string }>>({});
+  type Draft = { sales: string; potential: string; manager: string; revenue: Record<string, string> };
+  const [draft, setDraft] = useState<Record<string, Draft>>({});
 
   useEffect(() => {
-    const next: Record<string, { sales: string; potential: string; manager: string }> = {};
+    const next: Record<string, Draft> = {};
     for (const e of employees) {
       const s = stats.find((x) => x.employee_id === e.id);
+      const model = models.find((m) => m.id === e.comp_model_id) ?? null;
+      const rev: Record<string, string> = {};
+      for (const rate of model?.rates ?? []) {
+        rev[rate.name] = String(Number((s?.revenue_by_type ?? {})[rate.name] ?? 0));
+      }
       next[e.id] = {
         sales: String(Number(s?.sales_count ?? 0)),
         potential: String(Number(s?.potential_revenue ?? 0)),
         manager: String(Number(s?.manager_bonus ?? 0)),
+        revenue: rev,
       };
     }
     setDraft(next);
@@ -54,7 +61,13 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
   }, [query.dataUpdatedAt, month]);
 
   const mutation = useMutation({
-    mutationFn: (v: { employee_id: string; sales_count: number; potential_revenue: number; manager_bonus: number }) =>
+    mutationFn: (v: {
+      employee_id: string;
+      sales_count: number;
+      potential_revenue: number;
+      manager_bonus: number;
+      revenue_by_type: Record<string, number>;
+    }) =>
       saveStats({ data: { token, month, ...v } }),
     onSuccess: async () => {
       toast.success("נתוני המכירות נשמרו");
@@ -67,24 +80,29 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     const approved = records.filter((r) => r.employee_id === e.id && r.status === "approved");
     const hours = approved.reduce((s, r) => s + hoursOf(r, deductBreaks), 0);
     const monthly = e.pay_type === "monthly";
-    const base = monthly ? Number(e.monthly_salary ?? 0) : hours * Number(e.hourly_wage);
+    const commissionOnly = e.pay_type === "commission";
+    const base = commissionOnly ? 0 : monthly ? Number(e.monthly_salary ?? 0) : hours * Number(e.hourly_wage);
     const d = draft[e.id];
     const sales = Number(d?.sales ?? 0) || 0;
     const potential = Number(d?.potential ?? 0) || 0;
     const managerBonus = Number(d?.manager ?? 0) || 0;
     const model = models.find((m) => m.id === e.comp_model_id) ?? null;
-    const bonus = modelBonus(model, sales, potential);
+    const revenue: Record<string, number> = {};
+    for (const rate of model?.rates ?? []) revenue[rate.name] = Number(d?.revenue?.[rate.name] ?? 0) || 0;
+    const bonus = modelBonus(model, sales, potential, revenue);
     return {
       id: e.id,
       name: e.full_name,
       idNumber: e.id_number,
       days: approved.length,
       hours: Math.round(hours * 100) / 100,
-      payLabel: monthly ? "חודשי" : "שעתי",
-      wage: monthly ? Number(e.monthly_salary ?? 0) : Number(e.hourly_wage),
+      payLabel: commissionOnly ? "עמלות" : monthly ? "חודשי" : "שעתי",
+      wage: commissionOnly ? 0 : monthly ? Number(e.monthly_salary ?? 0) : Number(e.hourly_wage),
       base: Math.round(base * 100) / 100,
       sales,
       potential,
+      model,
+      revenue,
       modelName: model ? model.name : "ללא מודל",
       tierText: model ? tierLabel(findTier(model.tiers ?? [], sales)) : "—",
       bonus,
@@ -107,6 +125,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
         "מודל תגמול",
         "מכירות",
         "פוטנציאל הכנסות",
+        "הכנסות לפי סוג",
         "מדרגת תגמול",
         "בונוס",
         "בונוס מנהל",
