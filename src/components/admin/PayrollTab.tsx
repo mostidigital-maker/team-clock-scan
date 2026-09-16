@@ -248,6 +248,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
                         sales_count: Math.max(0, Math.round(r.sales)),
                         potential_revenue: Math.max(0, r.potential),
                         manager_bonus: Math.max(0, r.managerBonus),
+                        revenue_by_type: r.revenue,
                       })
                     }
                   >
