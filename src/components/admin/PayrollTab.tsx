@@ -182,6 +182,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
               <th className="p-3">מודל</th>
               <th className="p-3">מכירות</th>
               <th className="p-3">פוטנציאל הכנסות</th>
+              <th className="p-3">הכנסות לפי סוג</th>
               <th className="p-3">בונוס</th>
               <th className="p-3">בונוס מנהל</th>
               <th className="p-3">נסיעות</th>
@@ -291,7 +292,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
           </tbody>
           <tfoot>
             <tr className="border-t bg-secondary font-bold">
-              <td className="p-3" colSpan={12}>
+              <td className="p-3" colSpan={13}>
                 סה״כ
               </td>
               <td className="p-3">{money(Math.round(grandTotal * 100) / 100)}</td>
