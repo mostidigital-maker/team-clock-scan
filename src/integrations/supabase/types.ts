@@ -221,6 +221,7 @@ export type Database = {
           max_sales: number | null
           min_sales: number
           model_id: string
+          percent: number
           value: number
         }
         Insert: {
@@ -230,6 +231,7 @@ export type Database = {
           max_sales?: number | null
           min_sales?: number
           model_id: string
+          percent?: number
           value?: number
         }
         Update: {
@@ -239,6 +241,7 @@ export type Database = {
           max_sales?: number | null
           min_sales?: number
           model_id?: string
+          percent?: number
           value?: number
         }
         Relationships: [
