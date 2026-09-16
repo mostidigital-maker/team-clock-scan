@@ -222,6 +222,37 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
                   />
                 </td>
                 <td className="p-3">
+                  {(r.model?.rates ?? []).length === 0 ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : (
+                    <div className="space-y-1">
+                      {(r.model?.rates ?? []).map((rate) => (
+                        <label key={rate.name} className="flex items-center justify-end gap-2 text-xs">
+                          <span className="whitespace-nowrap text-muted-foreground">
+                            {rate.name} ({rate.percent}%)
+                          </span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="h-8 w-24"
+                            value={draft[r.id]?.revenue?.[rate.name] ?? "0"}
+                            onChange={(e) =>
+                              setDraft((p) => ({
+                                ...p,
+                                [r.id]: {
+                                  ...p[r.id]!,
+                                  revenue: { ...(p[r.id]?.revenue ?? {}), [rate.name]: e.target.value },
+                                },
+                              }))
+                            }
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td className="p-3">
                   {money(r.bonus)}
                   <span className="block text-xs text-muted-foreground">{r.tierText}</span>
                 </td>
