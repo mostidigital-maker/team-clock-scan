@@ -3,7 +3,14 @@ import { z } from "zod";
 
 const tokenOnly = z.object({ token: z.string().min(10) });
 
-type RawTier = { id: string; min_sales: number; max_sales: number | null; kind: string; value: number };
+type RawTier = {
+  id: string;
+  min_sales: number;
+  max_sales: number | null;
+  kind: string;
+  value: number;
+  percent?: number;
+};
 type RawRate = { id: string; name: string; percent: number };
 type RawModel = {
   id: string;
@@ -33,6 +40,7 @@ function mapModels(rows: unknown) {
       max_sales: t.max_sales === null || t.max_sales === undefined ? null : Number(t.max_sales),
       kind: t.kind === "fixed" ? ("fixed" as const) : ("percent" as const),
       value: Number(t.value),
+      percent: Number(t.percent ?? 0),
     })),
     rates: (m.comp_model_rates ?? []).map((r) => ({ id: r.id, name: r.name, percent: Number(r.percent) })),
   }));
@@ -140,6 +148,7 @@ export const saveCompModel = createServerFn({ method: "POST" })
               max_sales: z.number().int().min(0).max(100000000).nullable(),
               kind: z.enum(["percent", "fixed"]),
               value: z.number().min(0).max(100000000),
+              percent: z.number().min(0).max(100).default(0),
             }),
           )
           .max(30),

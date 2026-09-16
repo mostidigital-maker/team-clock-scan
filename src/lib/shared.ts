@@ -116,6 +116,7 @@ export type CompTier = {
   max_sales: number | null;
   kind: "percent" | "fixed";
   value: number;
+  percent?: number;
 };
 
 export type CompRate = {
@@ -179,10 +180,11 @@ export function modelBonus(
   const kind = model.kind ?? "tiers";
   if (kind === "commission") return commissionBonus(model, revenue);
   if (kind === "management") {
-    const base = potential * (Number(model.percent ?? 0) / 100);
     const tier = findTier(model.tiers ?? [], revenueTotal(revenue) || potential);
-    const fixed = tier ? (tier.kind === "fixed" ? Number(tier.value) : potential * (Number(tier.value) / 100)) : 0;
-    return Math.round((base + fixed) * 100) / 100;
+    if (!tier) return 0;
+    const pct = potential * (Number(tier.percent ?? 0) / 100);
+    const fixed = Number(tier.value ?? 0);
+    return Math.round((pct + fixed) * 100) / 100;
   }
   const tier = findTier(model.tiers ?? [], sales);
   if (!tier) return 0;
@@ -205,7 +207,9 @@ type RawModelRow = {
   active?: boolean;
   kind?: string | null;
   percent?: number | null;
-  comp_model_tiers?: { id?: string; min_sales: number; max_sales: number | null; kind: string; value: number }[] | null;
+  comp_model_tiers?:
+    | { id?: string; min_sales: number; max_sales: number | null; kind: string; value: number; percent?: number }[]
+    | null;
   comp_model_rates?: { id?: string; name: string; percent: number }[] | null;
 };
 
@@ -224,6 +228,7 @@ export function mapModelRow(row: RawModelRow): CompModel {
       max_sales: t.max_sales === null || t.max_sales === undefined ? null : Number(t.max_sales),
       kind: t.kind === "fixed" ? ("fixed" as const) : ("percent" as const),
       value: Number(t.value),
+      percent: Number(t.percent ?? 0),
     })),
     rates: (row.comp_model_rates ?? []).map((r) => ({ name: r.name, percent: Number(r.percent) })),
   };
