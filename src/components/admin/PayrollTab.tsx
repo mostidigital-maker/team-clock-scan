@@ -143,6 +143,9 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
         r.modelName,
         r.sales,
         r.potential,
+        Object.entries(r.revenue)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(" | "),
         r.tierText,
         r.bonus,
         r.managerBonus,
