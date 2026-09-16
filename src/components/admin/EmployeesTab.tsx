@@ -19,7 +19,7 @@ const empty = {
   hourly_wage: 0,
   travel: 0,
   active: true,
-  pay_type: "hourly" as "hourly" | "monthly",
+  pay_type: "hourly" as "hourly" | "monthly" | "commission",
   monthly_salary: 0,
   comp_model_id: null as string | null,
 };
@@ -78,11 +78,15 @@ export function EmployeesTab({ token }: { token: string }) {
               <tr key={e.id} className="border-t">
                 <td className="p-3 font-medium">{e.full_name}</td>
                 <td className="p-3">{e.id_number}</td>
-                <td className="p-3">{e.pay_type === "monthly" ? "שכר חודשי" : "לפי שעות"}</td>
+                <td className="p-3">
+                  {e.pay_type === "monthly" ? "שכר חודשי" : e.pay_type === "commission" ? "עמלות בלבד" : "לפי שעות"}
+                </td>
                 <td className="p-3">
                   {e.pay_type === "monthly"
                     ? `${money(Number(e.monthly_salary ?? 0))} לחודש`
-                    : `${money(Number(e.hourly_wage))} לשעה`}
+                    : e.pay_type === "commission"
+                      ? "ללא שכר בסיס"
+                      : `${money(Number(e.hourly_wage))} לשעה`}
                 </td>
                 <td className="p-3">{money(Number(e.travel))}</td>
                 <td className="p-3">{modelName(e.comp_model_id)}</td>
@@ -103,7 +107,8 @@ export function EmployeesTab({ token }: { token: string }) {
                         hourly_wage: Number(e.hourly_wage),
                         travel: Number(e.travel),
                         active: e.active,
-                        pay_type: e.pay_type === "monthly" ? "monthly" : "hourly",
+                        pay_type:
+                          e.pay_type === "monthly" ? "monthly" : e.pay_type === "commission" ? "commission" : "hourly",
                         monthly_salary: Number(e.monthly_salary ?? 0),
                         comp_model_id: e.comp_model_id ?? null,
                       })
@@ -151,14 +156,17 @@ export function EmployeesTab({ token }: { token: string }) {
                 <select
                   className="h-10 w-full rounded-md border bg-background px-3 text-sm"
                   value={form.pay_type}
-                  onChange={(e) => setForm({ ...form, pay_type: e.target.value as "hourly" | "monthly" })}
+                  onChange={(e) =>
+                    setForm({ ...form, pay_type: e.target.value as "hourly" | "monthly" | "commission" })
+                  }
                 >
                   <option value="hourly">לפי שעות</option>
                   <option value="monthly">שכר חודשי קבוע</option>
+                  <option value="commission">עמלות בלבד (ללא שכר בסיס)</option>
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {form.pay_type === "monthly" ? (
+                {form.pay_type === "commission" ? null : form.pay_type === "monthly" ? (
                   <div className="space-y-1">
                     <Label>שכר חודשי</Label>
                     <Input
