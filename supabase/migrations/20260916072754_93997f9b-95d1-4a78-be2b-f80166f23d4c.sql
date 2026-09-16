@@ -1,0 +1,1 @@
+ALTER TABLE public.comp_model_tiers ADD COLUMN IF NOT EXISTS percent numeric NOT NULL DEFAULT 0;
