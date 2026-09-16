@@ -74,6 +74,7 @@ export function CompModelsTab({ token }: { token: string }) {
                   max_sales: t.max_sales === null ? null : Math.max(0, Math.round(Number(t.max_sales) || 0)),
                   kind: form!.kind === "management" ? ("fixed" as const) : t.kind,
                   value: Math.max(0, Number(t.value) || 0),
+                  percent: form!.kind === "management" ? Math.max(0, Number(t.percent) || 0) : 0,
                 })),
           rates:
             form!.kind === "commission"
@@ -166,19 +167,15 @@ export function CompModelsTab({ token }: { token: string }) {
               </ul>
             ) : (
               <ul className="space-y-1 text-sm">
-                {m.kind === "management" ? (
-                  <li className="flex justify-between border-t pt-1">
-                    <span>אחוז מסך הפוטנציאל</span>
-                    <span className="font-medium">{Number(m.percent ?? 0)}%</span>
-                  </li>
-                ) : null}
                 {sortTiers(m.tiers ?? []).map((t, i) => (
                   <li key={i} className="flex justify-between border-t pt-1">
                     <span>
                       {m.kind === "management" ? `הכנסות ${tierRange(t)}` : `${tierRange(t)} מכירות`}
                     </span>
                     <span className="font-medium">
-                      {m.kind === "management" ? money(Number(t.value)) : tierLabel(t)}
+                      {m.kind === "management"
+                        ? `${Number(t.percent ?? 0)}%${Number(t.value) ? ` + ${money(Number(t.value))}` : ""}`
+                        : tierLabel(t)}
                     </span>
                   </li>
                 ))}
@@ -266,27 +263,14 @@ export function CompModelsTab({ token }: { token: string }) {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {form.kind === "management" ? (
-                    <div className="space-y-1">
-                      <Label>אחוז מסך פוטנציאל ההכנסות</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.percent}
-                        onChange={(e) => setForm({ ...form, percent: Number(e.target.value) })}
-                      />
-                    </div>
-                  ) : null}
-
                   <div className="space-y-2">
-                    <Label>{form.kind === "management" ? "סכום קבוע לפי מדרגת הכנסות" : "מדרגות תגמול"}</Label>
+                    <Label>{form.kind === "management" ? "מדרגות הכנסות — אחוז וסכום קבוע" : "מדרגות תגמול"}</Label>
                     {form.tiers.map((t, i) => (
                       <div
                         key={i}
                         className={`grid items-end gap-2 rounded-md border p-2 ${
                           form.kind === "management"
-                            ? "grid-cols-[1fr_1fr_1fr_auto]"
+                            ? "grid-cols-[1fr_1fr_1fr_1fr_auto]"
                             : "grid-cols-[1fr_1fr_1fr_1fr_auto]"
                         }`}
                       >
@@ -312,7 +296,18 @@ export function CompModelsTab({ token }: { token: string }) {
                             }
                           />
                         </div>
-                        {form.kind === "management" ? null : (
+                        {form.kind === "management" ? (
+                          <div className="space-y-1">
+                            <span className="text-xs text-muted-foreground">אחוז מהפוטנציאל</span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={t.percent ?? 0}
+                              onChange={(e) => setTier(i, { percent: Number(e.target.value) })}
+                            />
+                          </div>
+                        ) : (
                           <div className="space-y-1">
                             <span className="text-xs text-muted-foreground">סוג</span>
                             <select
@@ -327,7 +322,7 @@ export function CompModelsTab({ token }: { token: string }) {
                         )}
                         <div className="space-y-1">
                           <span className="text-xs text-muted-foreground">
-                            {form.kind === "management" ? "סכום קבוע" : "ערך"}
+                            {form.kind === "management" ? "סכום קבוע (0 אם אין)" : "ערך"}
                           </span>
                           <Input
                             type="number"
@@ -361,6 +356,7 @@ export function CompModelsTab({ token }: { token: string }) {
                               max_sales: null,
                               kind: form.kind === "management" ? "fixed" : "percent",
                               value: 0,
+                              percent: 0,
                             },
                           ],
                         })
