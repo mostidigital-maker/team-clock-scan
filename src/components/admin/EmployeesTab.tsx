@@ -22,6 +22,7 @@ const empty = {
   pay_type: "hourly" as "hourly" | "monthly" | "commission",
   monthly_salary: 0,
   comp_model_id: null as string | null,
+  employment_start_date: null as string | null,
 };
 
 export function EmployeesTab({ token }: { token: string }) {
@@ -111,6 +112,7 @@ export function EmployeesTab({ token }: { token: string }) {
                           e.pay_type === "monthly" ? "monthly" : e.pay_type === "commission" ? "commission" : "hourly",
                         monthly_salary: Number(e.monthly_salary ?? 0),
                         comp_model_id: e.comp_model_id ?? null,
+                        employment_start_date: e.employment_start_date ?? null,
                       })
                     }
                   >
@@ -150,6 +152,14 @@ export function EmployeesTab({ token }: { token: string }) {
               <div className="space-y-1">
                 <Label>תעודת זהות</Label>
                 <Input value={form.id_number} onChange={(e) => setForm({ ...form, id_number: e.target.value })} required />
+              </div>
+              <div className="space-y-1">
+                <Label>תאריך תחילת העסקה</Label>
+                <Input
+                  type="date"
+                  value={form.employment_start_date ?? ""}
+                  onChange={(e) => setForm({ ...form, employment_start_date: e.target.value || null })}
+                />
               </div>
               <div className="space-y-1">
                 <Label>סוג תשלום</Label>

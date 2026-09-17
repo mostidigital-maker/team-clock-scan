@@ -267,6 +267,7 @@ export const saveEmployee = createServerFn({ method: "POST" })
         pay_type: z.enum(["hourly", "monthly", "commission"]).default("hourly"),
         monthly_salary: z.number().min(0).max(10000000).default(0),
         comp_model_id: z.string().uuid().nullable().default(null),
+        employment_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
       })
       .parse(d),
   )

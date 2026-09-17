@@ -33,6 +33,7 @@ export type Employee = {
   pay_type?: string;
   monthly_salary?: number;
   comp_model_id?: string | null;
+  employment_start_date?: string | null;
 };
 
 export type QrCode = {
