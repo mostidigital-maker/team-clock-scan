@@ -358,6 +358,7 @@ export type Database = {
           bonus: number
           comp_model_id: string | null
           created_at: string
+          employment_start_date: string | null
           full_name: string
           hourly_wage: number
           id: string
@@ -371,6 +372,7 @@ export type Database = {
           bonus?: number
           comp_model_id?: string | null
           created_at?: string
+          employment_start_date?: string | null
           full_name: string
           hourly_wage?: number
           id?: string
@@ -384,6 +386,7 @@ export type Database = {
           bonus?: number
           comp_model_id?: string | null
           created_at?: string
+          employment_start_date?: string | null
           full_name?: string
           hourly_wage?: number
           id?: string
