@@ -80,7 +80,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     onError: (error: Error) => toast.error(error.message || "שמירה נכשלה"),
   });
 
-  const rows = employees.map((employee) => {
+  const allRows = employees.map((employee) => {
     const approved = records.filter((record) => record.employee_id === employee.id && record.status === "approved");
     const hours = approved.reduce((sum, record) => sum + hoursOf(record, deductBreaks), 0);
     const monthly = employee.pay_type === "monthly";
@@ -96,6 +96,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     const bonus = modelBonus(model, sales, potential, revenue);
     return {
       id: employee.id,
+      active: employee.active !== false,
       name: employee.full_name,
       idNumber: employee.id_number,
       employmentStartDate: employee.employment_start_date ?? "",
