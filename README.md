@@ -1,417 +1,128 @@
-# Work Log Pro
-
-Build a simple, professional employee attendance and work-hours management web app.
-
-IMPORTANT:
-
-Keep the project simple and lightweight.
-
-Build an MVP that is fully functional.
-
-Do not add unnecessary features.
-
-Use Hebrew RTL interface.
-
-Mobile-first design because employees will mainly use their phones.
-
-Default company name: "מכללת המשווקים".
-
-The admin can change the company name and upload a company logo.
-
-1. EMPLOYEE LOGIN
-
-Employees do NOT create accounts themselves.
-
-The admin creates employees with:
-
-Full name
-
-ID number (ת"ז)
-
-Hourly wage
-
-Active / inactive status
-
-Employee login:
-
-Employee enters their ID number and name.
-
-The system checks that they match an active employee.
-
-After successful login, show ONLY the employee attendance screen.
-
-2. EMPLOYEE ATTENDANCE SCREEN
-
-The employee sees:
-
-Employee name
-
-Current date
-
-Current status:
-
-לא התחלת עבודה
-
-בעבודה
-
-סיימת עבודה
-
-Main actions:
-
-כניסה
-
-To report starting work:
-
-Employee must scan a QR/barcode generated and uploaded by the admin.
-
-The QR/barcode must be valid/current.
-
-After successful scan, request the employee's location using browser geolocation.
-
-Save:
-
-Employee
-
-Date
-
-Time
-
-Location coordinates
-
-QR/barcode used
-
-Entry/exit type
-
-יציאה
-
-To report finishing work:
-
-Scan the current QR/barcode again.
-
-Request location again.
-
-Save exit time and location.
-
-Calculate total work duration.
-
-The employee must NOT be able to manually add or edit working hours.
-
-3. QR/BARCODE SECURITY
-
-The admin can generate/upload a new QR/barcode.
-
-The admin should be able to change it every day or every few days.
-
-A QR/barcode should have a unique value/token and validity period.
-
-Example:
-
-Admin creates QR for today.
-
-Employee must physically scan the current QR.
-
-Old QR becomes invalid when the admin changes it or when its validity expires.
-
-Do NOT allow employees to upload a photo of a QR code or enter the QR value manually.
-
-The goal is to make it difficult for an employee to report attendance from home.
-
-4. EMPLOYEE MONTHLY SUMMARY
-
-On the employee screen show a simple monthly summary:
-
-Total approved days
-
-Total approved hours
-
-Current month
-
-List of attendance records
-
-Entry time
-
-Exit time
-
-Daily hours
-
-Approval status
-
-The employee should be able to hide/collapse the monthly summary.
-
-IMPORTANT:
-Only ADMIN-APPROVED work records count toward the employee's totals.
-
-If a manager has NOT approved a specific day's hours, those hours must NOT be included in the totals.
-
-5. ADMIN LOGIN
-
-Create a separate admin login.
-
-Admin credentials are configured by the system/project.
-
-The admin dashboard should have these simple sections:
-
-Dashboard
-
-Show:
-
-Total employees
-
-Employees currently working
-
-Total approved hours this month
-
-Total approved payroll this month
-
-Employees
-
-Admin can:
-
-Add employee
-
-Edit employee
-
-Deactivate employee
-
-Change employee name
-
-Change ID number
-
-Change hourly wage
-
-Add/edit travel reimbursement
-
-Add/edit bonus
-
-Employee data:
-
-Name
-
-ID number
-
-Hourly wage
-
-Travel
-
-Bonus
-
-Active/inactive
-
-Attendance
-
-Admin can see all employees' attendance records.
-
-For each day:
-
-Employee
-
-Date
-
-Entry
-
-Exit
-
-Total hours
-
-Location
-
-Approval status
-
-Admin can:
-
-Approve hours
-
-Reject/unapprove hours
-
-Edit hours
-
-Add attendance manually
-
-IMPORTANT:
-ONLY ADMIN CAN ADD OR EDIT HOURS MANUALLY.
-Employees cannot edit attendance.
-
-QR / Barcode
-
-Admin can:
-
-Generate a new QR code
-
-Set its validity
-
-Activate/deactivate it
-
-Replace the current QR code
-
-Show the current active QR code clearly so the manager can display/print it at the workplace.
-
-Payroll
-
-Create a simple monthly payroll report.
-
-For each employee calculate:
-
-Approved hours × hourly wage
-
-bonus
-
-travel
-= total gross payment
-
-Show:
-
-Employee
-
-Approved days
-
-Approved hours
-
-Hourly wage
-
-Base salary
-
-Bonus
-
-Travel
-
-Total gross
-
-Only APPROVED hours are included.
-
-Allow selecting a month.
-
-Add a simple "Export CSV" button for the payroll report.
-
-6. COMPANY SETTINGS
-
-Admin can change:
-
-Company name
-
-Company logo
-
-Default:
-Company name: "מכללת המשווקים"
-
-Logo can be uploaded by the admin.
-
-7. DATABASE
-
-Use a clean database structure.
-
-Suggested tables:
-
-employees
-
-attendance
-
-qr_codes
-
-company_settings
-
-admin_users
-
-Attendance should store:
-
-employee_id
-
-date
-
-entry_time
-
-exit_time
-
-entry_latitude
-
-entry_longitude
-
-exit_latitude
-
-exit_longitude
-
-qr_code_id
-
-status
-
-approved_by
-
-approved_at
-
-Use proper security rules so employees can only access their own attendance data and cannot modify attendance records.
-
-8. DESIGN
-
-Very simple professional UI.
-
-Hebrew RTL.
-
-Mobile-first employee screen.
-
-Use large buttons:
-🟢 כניסה
-🔴 יציאה
-
-Admin dashboard can use cards and tables.
-
-Do not over-design.
-
-Do not add:
-
-Chat
-
-Notifications
-
-Complex roles
-
-Social features
-
-Unnecessary animations
-
-Payment gateway
-
-External payroll integration
-
-The priority is:
-
-Employee login
-
-QR scan
-
-Location verification
-
-Entry/exit
-
-Admin approval
-
-Monthly hours
-
-Payroll calculation
-
-Employee management
-
-Company logo/name
-
-Build the complete working MVP now, with clean reusable components and a simple database structure.
-
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://team-clock-scan.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/cde6c601-5ea2-4dc7-8eae-563dcadfe13c).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+# Work Log Pro — ניהול נוכחות, שעות עבודה ושכר
+
+מערכת פשוטה ומקצועית לניהול נוכחות עובדים ושעות עבודה, עם אישור שעות על ידי מנהל, חישוב שכר ובונוסים, ודוח שכר חודשי להורדה.
+
+- **האפליקיה החיה:** https://team-clock-scan.lovable.app
+- **מסך עובד:** `/` · **מסך מנהל:** `/admin`
+
+---
+
+## 1. סקירה כללית
+
+המערכת מחולקת לשני מסכים עיקריים:
+
+| מסך | כתובת | מי משתמש |
+| --- | --- | --- |
+| מסך עובד | `/` | כל עובד פעיל |
+| מסך מנהל | `/admin` | המנהל בלבד |
+
+הממשק כולו בעברית (RTL), מעוצב Mobile-First מכיוון שהעובדים מדווחים בעיקר מהטלפון.
+
+## 2. מסך העובד
+
+### התחברות
+- עובדים אינם נרשמים בעצמם — **המנהל יוצר את העובדים** במסך הניהול.
+- התחברות באמצעות **מספר זהות (ת״ז) + שם מלא**. המערכת מאמתת שהם תואמים לעובד פעיל.
+
+### דיווח כניסה ויציאה
+- בעת דיווח, העובד בוחר את מקום העבודה:
+  - **מהמכללה** — נדרשת סריקת ברקוד/QR שהמנהל מדפיס ומציג במקום העבודה. לא ניתן להעלות תמונה של קוד או להזין את ערכו ידנית.
+  - **מהבית** — הזנת קוד יומי שהמנהל מייצר ומחליף מדי יום בלשונית "ברקוד".
+- לאחר דיווח מוצלח המערכת מבקשת **מיקום גיאוגרפי** (גם בדיווח מהבית; אם אין הרשאת מיקום הדיווח נרשם בכל זאת).
+- לכל דיווח נשמרים: עובד, תאריך, שעה, קואורדינטות מיקום, הקוד שנסרק, מקום העבודה וסוג הדיווח (כניסה/יציאה).
+
+### הפסקות
+- בזמן משמרת פתוחה, העובד יכול לצאת להפסקה ולחזור ממנה.
+- כל הפסקה מתועדת עם שעת יציאה, שעת חזרה ומשך זמן, וניתן לראות את סה״כ זמן ההפסקות.
+
+### סיכום חודשי
+- עובד רואה רשימת דיווחים: תאריך, כניסה, יציאה, שעות יומיות, הפסקות ומקום עבודה.
+- סכום שעות **מחושב רק מימים שאושרו על ידי המנהל**.
+- אם לעובד יש מודל תגמול, מוצג גם **בונוס משוער** עם הערה שהוא משוער, מתעדכן אחת לשבוע ותלוי באישור סופי של המנהל.
+- את הסיכום החודשי ניתן לקפל/לפתוח.
+
+## 3. מסך המנהל
+
+### לוח סקירה
+- כמות עובדים, עובדים בעבודה כרגע, כמה מהמכללה וכמה מהבית, וכמה נמצאים בהפסקה.
+- לחיצה על עובד פותחת פירוט, כולל לוג הפסקות (שעת יציאה, חזרה ומשך).
+
+### עובדים
+הוספה, עריכה והשבתה של עובדים. לכל עובד:
+- שם מלא, ת״ז, שכר שעתי, תאריך תחילת העסקה, נסיעות, סטטוס פעיל/לא פעיל.
+- **סוג תשלום:** לפי שעה / שכר חודשי / **עמלות בלבד** (ללא שכר בסיס).
+- בחירת **מודל תגמול** (או בלי מודל בכלל).
+
+### נוכחות
+- צפייה בכל דיווחי הנוכחות: עובד, תאריך, כניסה, יציאה, שעות, מקום עבודה (מהבית/מהמכללה), מיקום וסטטוס אישור.
+- אישור, דחייה, עריכה והוספה ידנית של שעות — **המנהל בלבד** רשאי להוסיף או לערוך שעות; עובדים לא יכולים לשנות דיווחים.
+
+### ברקוד / קודים
+- יצירת ברקוד חדש עם ערך ייחודי, תקופת תוקף והפעלה/השבתה.
+- הצגת הברקוד הפעיל להדפסה והצבה במקום העבודה.
+- יצירת **קוד יומי לדיווח מהבית** שמתחלף מדי יום.
+- כשהמנהל מחליף את הברקוד או שתוקפו פג — הקוד הישן אינו תקף.
+
+### שכר חודשי
+- דוח שכר לפי חודש נבחר, לכל עובד: ימי עבודה בפועל, שעות מאושרות, בסיס לפי שכר שעתי/חודשי/עמלות בלבד, נסיעות, בונוס ובונוס מנהל.
+- הזנה ידנית של **כמות מכירות**, **פוטנציאל הכנסות** ו**סכומי הכנסות לפי סוג** (למשל: העברה בנקאית, אשראי, הוראת קבע) — הבונוס מתעדכן אוטומטית לפי מודל התגמול.
+- **בונוס מנהל** — סכום קבוע שהמנהל קובע ידנית לכל חודש, נכלל בברוטו ואינו מוצג לעובד.
+- רק שעות **מאושרות** נכללות בחישוב.
+- ייצוא לקובץ **Excel (xlsx)** בעברית ו-RTL עם העמודות: שם עובד, ת״ז, תחילת עבודה, חודש, ימי עבודה בפועל, שעות עבודה, שכר שעתי, בסיס, נסיעות, בונוס, בונוס מנהל, סה״כ ברוטו.
+- בייצוא ניתן לסמן הכללת עובדים לא פעילים (למשל עובד שעזב באמצע חודש); בתצוגה מוצגים עובדים פעילים בלבד.
+
+### מודלי תגמול
+שלושה סוגי מודלים, ניתנים להוספה, עריכה ומחיקה:
+
+1. **מדרגות לפי כמות מכירות** — לכל מדרגה (עד 4, 5–9, 10–15, 16+) אחוז מהפוטנציאל או סכום קבוע.
+2. **עמלות לפי סוג הכנסה** — רשימה גמישה של סוגי הכנסה, לכל אחד אחוז (למשל: העברה 10%, אשראי 12.5%, הוראת קבע 15%).
+3. **מודל הנהלה** — לכל מדרגת הכנסות נקבעים בנפרד אחוז מהפוטנציאל וגם סכום קבוע (0 למי שלא מקבל).
+
+### הגדרות
+- שינוי **שם החברה** (ברירת מחדל: "מכללת המשווקים") והעלאת **לוגו**.
+- סימון "ניכוי זמן הפסקות מסך השעות" — כשמסומן, ההפסקות מנוכות מהשעות ומהשכר; כשלא, הן רק מתועדות.
+- שינוי סיסמת מנהל.
+
+## 4. אבטחה
+
+- הכל עובר דרך פונקציות שרת — הדפדפן אינו ניגש ישירות לנתונים.
+- סיסמת מנהל נשמרת כ-hash (SHA-256 עם salt ייחודי).
+- טוקן התחברות (עובד/מנהל) נשמר ב-`localStorage` ותוקף תוך 30 ימים.
+- עובד אינו יכול להוסיף או לערוך שעות בעצמו, ולא יכול להזין ערך ברקוד ידנית.
+- אין הרשמה עצמאית של עובדים.
+
+## 5. מבנה בסיס הנתונים
+
+| טבלה | תפקיד |
+| --- | --- |
+| `employees` | עובדים: שם, ת״ז, שכר שעתי, סוג תשלום, שכר חודשי, מודל תגמול, תאריך תחילת העסקה, פעיל/לא פעיל |
+| `attendance` | דיווחי נוכחות: תאריך, כניסה/יציאה, מיקומים, קוד שנסרק, מקום עבודה, סטטוס אישור |
+| `attendance_breaks` | הפסקות: שעת יציאה וחזרה לכל הפסקה בתוך משמרת |
+| `qr_codes` | ברקודים וקודי בית: ערך ייחודי, תוקף, הפעלה, סוג (`qr` / `home`) |
+| `employee_monthly_stats` | נתונים חודשיים: כמות מכירות, פוטנציאל הכנסות, סכומי הכנסות לפי סוג, בונוס מנהל |
+| `comp_models` | מודלי תגמול וסוגם (מדרגות / עמלות / הנהלה) |
+| `comp_model_tiers` | מדרגות של מודל: טווח, אחוז, סכום קבוע |
+| `comp_model_rates` | סוגי הכנסה ואחוזים למודלי עמלות |
+| `company_settings` | שם החברה, לוגו, ניכוי הפסקות |
+| `admin_users` | מנהלים: שם משתמש, hash סיסמה, salt |
+| `app_sessions` | טוקני התחברות לעובד ולמנהל |
+
+## 6. טכנולוגיות
+
+- **TanStack Start** (React 19, Vite) — פונקציות שרת באמצעות `createServerFn`.
+- **Lovable Cloud** (בסיס נתונים, אחסון לוגו) — גישה דרך פונקציות שרת בלבד.
+- **Tailwind CSS v4** + shadcn/ui — עיצוב RTL מותאם נייד.
+- **TanStack Query** — ניהול נתונים במסכים.
+- **qr-scanner** לסריקת ברקוד, **qrcode** לייצור ברקודים, **xlsx** לייצוא שכר.
+- **PWA** — כפתור "התקנת האפליקציה": התקנה ישירה באנדרואיד והוספה למסך הבית ב-iPhone.
+
+## 7. פיתוח מקומי
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
+git clone <כתובת-המאגר>
+cd <שם-המאגר>
 npm i
 npm run dev
 ```
+
+הפרויקט נבנה עם [Lovable](https://lovable.dev) — ניתן להמשיך לפתח אותו בעורך של Lovable, וכל שינוי מסתנכרן ישירות למאגר ה-GitHub.
