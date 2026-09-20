@@ -41,6 +41,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
   const stats = (query.data?.stats ?? []) as MonthlyStats[];
   const models = (query.data?.models ?? []) as CompModel[];
   const [draft, setDraft] = useState<Record<string, Draft>>({});
+  const [includeInactive, setIncludeInactive] = useState(false);
 
   useEffect(() => {
     const next: Record<string, Draft> = {};
@@ -80,7 +81,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     onError: (error: Error) => toast.error(error.message || "שמירה נכשלה"),
   });
 
-  const rows = employees.map((employee) => {
+  const allRows = employees.map((employee) => {
     const approved = records.filter((record) => record.employee_id === employee.id && record.status === "approved");
     const hours = approved.reduce((sum, record) => sum + hoursOf(record, deductBreaks), 0);
     const monthly = employee.pay_type === "monthly";
@@ -96,6 +97,7 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     const bonus = modelBonus(model, sales, potential, revenue);
     return {
       id: employee.id,
+      active: employee.active !== false,
       name: employee.full_name,
       idNumber: employee.id_number,
       employmentStartDate: employee.employment_start_date ?? "",
@@ -118,10 +120,12 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
     };
   });
 
+  const rows = allRows.filter((row) => row.active);
+
   const exportExcel = () => {
     downloadPayrollExcel(
       month,
-      rows.map((row) => ({
+      (includeInactive ? allRows : rows).map((row) => ({
         employeeName: row.name,
         idNumber: row.idNumber,
         employmentStartDate: row.employmentStartDate,
@@ -149,6 +153,15 @@ export function PayrollTab({ token, month, setMonth }: { token: string; month: s
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Input type="month" value={month} onChange={(event) => setMonth(event.target.value)} className="w-40" />
+          <label className="flex items-center gap-2 text-xs font-medium">
+            <input
+              type="checkbox"
+              className="size-4 accent-primary"
+              checked={includeInactive}
+              onChange={(event) => setIncludeInactive(event.target.checked)}
+            />
+            <span>כלול עובדים לא פעילים בייצוא</span>
+          </label>
           <Button variant="outline" onClick={exportExcel}>
             <Download className="ms-1 size-4" /> ייצוא Excel
           </Button>
